@@ -912,3 +912,2352 @@ This table maps the application URLs to their corresponding pages.
 | `/settings` | `SettingsPage` | Central hub for all settings pages. |
 | `/settings/branches` | `BranchesPage` | Page to manage shop branches. |
 | `/settings/device-models` | `DeviceModelsPage`| Page to manage brands and models. |
+
+
+<details>
+<summary><h3>4.5 Expenses Management</h3></summary>
+
+This section defines the requirements for logging and tracking all business expenses. It covers both general expenses (like rent) and direct product purchases from suppliers.
+
+#### **Master Fields & Business Rules**
+This consolidated view lists all fields related to expense and purchase records.
+
+**Master Field Table: General Expense**
+| Field Name | Data Type | Appears On | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | `[List]` | Unique identifier for the expense record. |
+| `date` | Date | `[List]`, `[Add/Edit]`| The date the expense was incurred. Required. |
+| `description` | String | `[List]`, `[Add/Edit]`| A clear description of the expense. Required. |
+| **[Category](#expense-category-details)** | String | `[List]`, `[Add/Edit]`| The category of the expense (e.g., "Rent", "Utilities"). Required. |
+| `amount` | Number | `[List]`, `[Add/Edit]`| The monetary value of the expense. Required. |
+
+**Master Field Table: Product Purchase**
+| Field Name | Data Type | Appears On | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | `[List]` | Unique identifier for the purchase record. |
+| `supplierId` | String (Reference) | `[Add/Edit]` | The ID of the `Supplier`. Required. |
+| `invoiceNumber`| String | `[List]`, `[Add/Edit]`| The supplier's invoice number. Required. |
+| `invoiceDate` | Date | `[Add/Edit]` | The date on the supplier's invoice. Required. |
+| `paymentDate` | Date | `[Add/Edit]` | The date the payment was made to the supplier. Required. |
+| `items` | Array of Objects | `[Add/Edit]` | A list of products being purchased. |
+| `purchaseTotal`| Number | `[Add/Edit]` | The subtotal of all items before discount. Required. |
+| `discount` | Number | `[Add/Edit]` | The discount amount received from the supplier. |
+| `toPay` | Number | `[Add/Edit]` | The final amount to be paid after discount. Required. |
+| `paid` | Number | `[Add/Edit]` | The actual amount paid in this transaction. Required. |
+| `paymentMethod`| String | `[Add/Edit]` | How the supplier was paid. Required. |
+| `paymentReceiptNumber`| String | `[Add/Edit]` | Optional reference for the payment. |
+| `orderNote` | Text | `[Add/Edit]` | Optional notes for the entire purchase order. |
+
+**Common Business Rules:**
+- A **Product Purchase** is a critical transaction. When a new purchase is saved, the system **must automatically increase the `stock` quantity** for each product listed in the purchase.
+- The `Purchase Price`, `Desktop Price`, and `Online Price` of a `Product` should be updatable from the "Add Product Purchase" form.
+
+---
+### **Page-Specific Views**
+These sections show the expected layout for each expenses-related page.
+
+* [Go to Add Product Purchase Page Details](#add-product-purchase-page)
+* [Go to Product Purchase List Page Details](#product-purchase-list-page)
+* [Go to Add General Expense Page Details](#add-expense-page)
+* [Go to General Expense List Page Details](#expense-list-page)
+
+---
+<br>
+
+#### **Add Product Purchase Page Details** {#add-product-purchase-page}
+* **Purpose:** To record the purchase of new inventory from a supplier and update stock levels.
+* **Page URL:** `/purchases/new`
+* **Layout:** This page has a two-column layout.
+    * **Left Column (Product Entry & Cart):** For searching and adding products to the purchase invoice.
+    * **Right Column (Invoice & Payment Details):** For managing supplier, invoice, and payment information.
+
+* **Components & Fields:**
+    * **Product Entry Section (Left):**
+        * `Product` (Searchable Autocomplete)
+        * `Quantity`, `Purchase Price`, `Desktop Price`, `Online Price` (Inputs for the new purchase)
+        * `Available Quantity`, `Purchase Price`, `Online Price`, `Desktop Price` (Read-only fields showing current product data)
+        * `Add Product` Button
+    * **Purchase Cart Section (Left, below entry):** A table listing all products added to the invoice, with columns for Product, Quantity, Price, and Actions (Remove).
+    * **Invoice Details Section (Right):**
+        * `Supplier` (Searchable Dropdown, Required, `+` Button)
+        * `Invoice Number` (Text Input, Required)
+        * `Invoice Date` (Date Picker, Required)
+        * `Payment Date` (Date Picker, Required)
+    * **Payment Section (Right):**
+        * `Purchase Total` (Read-only, calculated from cart)
+        * `Discount` (Number Input)
+        * `To Pay` (Read-only, calculated)
+        * `Paid` (Number Input, Required)
+        * `Payment Method` (Dropdown, Required, `+` Button)
+        * `Payment Receipt Number` (Text Input)
+        * `Order Note` (Text Area)
+    * **Action Buttons:** `Save`, `Reset`.
+
+<br>
+
+#### **Product Purchase List Page Details** {#product-purchase-list-page}
+* **Purpose:** To view a history of all purchase orders from suppliers.
+* **Page URL:** `/purchases`
+* **Table Columns:** `Invoice Number`, `Supplier`, `Invoice Date`, `Total Amount`, `Paid Amount`.
+
+<br>
+
+#### **Add General Expense Page Details** {#add-expense-page}
+* **Purpose:** To log a new general expense.
+* **Page URL:** `/expenses/new`
+* **Fields on this Page:**
+
+| Field Label | Field Type | Required |
+| :--- | :--- | :--- |
+| Description | Text Input | Yes |
+| Category | Dropdown/Text Input| Yes |
+| Amount (€) | Number Input | Yes |
+| Date | Date Picker | Yes |
+
+<br>
+
+#### **General Expense List Page Details** {#expense-list-page}
+* **Purpose:** To view a history of all logged general expenses.
+* **Page URL:** `/expenses`
+* **Search Fields:** Date Range, Category.
+* **Table Columns:** `Date`, `Description`, `Category`, `Amount`.
+
+---
+
+### **Field Deep Dives**
+
+##### **Category Details (Expense)** {#expense-category-details}
+* **Behavior:** Classifies the expense for reporting purposes.
+* **AI Context & Suggestions:** This should be a dropdown populated from a manageable list of categories in **System Settings** to ensure data consistency for accurate reporting.
+
+</details>
+
+
+
+
+<details>
+<summary><h3>4.6 System Settings</h3></summary>
+
+This section defines the administrative area of the application, where core data and system behaviors are managed. Access to this module should be restricted to `Administrator` roles.
+
+#### **Master View: Manageable Entities**
+Unlike other modules, the Settings area is a collection of tools for managing the data that populates dropdowns and lists throughout the application. The key manageable entities are:
+
+* **Branches:** Physical shop locations.
+* **Device Brands & Models:** The master list of manufacturers and their device models.
+* **Repair Statuses:** The customizable workflow steps for a repair job (e.g., "In Repair", "Waiting for Part", "Completed").
+* **Expense Categories:** The list of categories for logging expenses (e.g., "Rent", "Utilities").
+* **Payment Methods:** The list of accepted payment methods (e.g., "Cash", "Card").
+* **User Roles & Permissions:** Management of user roles and what each role can do.
+
+**Common Business Rules:**
+- Any changes made in the settings must be reflected in real-time across the entire application. For example, adding a new `Branch` should make it immediately available in the `Repair Form` dropdown.
+- Deleting an item that is currently in use (e.g., a `Repair Status` applied to an active job) should be prevented or handled with a clear warning and migration path.
+
+---
+### **Page-Specific Views**
+These sections describe the main pages within the Settings module.
+
+* [Go to Main Settings Page Details](#main-settings-page)
+* [Go to Branches Management Page Details](#branches-management-page)
+* [Go to Device Models Management Page Details](#device-models-management-page)
+
+---
+<br>
+
+#### **Main Settings Page Details** {#main-settings-page}
+* **Purpose:** To act as a central dashboard or hub for all administrative settings.
+* **Page URL:** `/settings`
+* **Functionality:** This page will display a list or a grid of cards, with each item linking to a specific management page (e.g., a card for "Manage Branches", a card for "Manage Device Models", etc.).
+
+<br>
+
+#### **Branches Management Page Details** {#branches-management-page}
+* **Purpose:** To create, view, update, and delete shop locations/branches.
+* **Page URL:** `/settings/branches`
+* **Functionality:** A standard CRUD (Create, Read, Update, Delete) interface.
+    * A `DataTable` will list all existing branches with columns for `Branch Name` and `Address`.
+    * An "Add New Branch" button will open a modal or navigate to a form for creating a new branch.
+    * Each row in the table will have "Edit" and "Delete" action buttons.
+
+<br>
+
+#### **Device Models Management Page Details** {#device-models-management-page}
+* **Purpose:** To manage the master list of Brands and their associated Models.
+* **Page URL:** `/settings/device-models`
+* **Functionality:** This page should have a two-panel layout to manage the one-to-many relationship between Brands and Models.
+    * **Panel 1 (Brands):** A list of all `Brands` (e.g., "Apple", "Samsung"). This list will have "Add", "Edit", and "Delete" functionality.
+    * **Panel 2 (Models):** When a brand is selected in the first panel, this panel shows a `DataTable` of all `Models` associated with that brand. This table will also have "Add", "Edit", and "Delete" functionality.
+
+</details>
+
+<details>
+<summary><h3>4.7 Managerial Tasks & Reporting</h3></summary>
+
+This section covers high-level reporting and management tools, primarily for `Manager` and `Administrator` roles.
+
+#### **Master Concepts & Business Rules**
+* **Financial Aggregation:** The system must aggregate data from `Sales`, `Repairs`, `Expenses`, and `Product Purchases` to generate financial reports.
+* **Data Scoping:** All reports must be filterable by `Branch` and a specific time period (`Date` or `Month`).
+* **Profit vs. Cash Flow:** The system must distinguish between Profit (Revenue - Costs) and Cash Flow (Cash In - Cash Out).
+
+---
+### **Page-Specific Views**
+* [Go to Khata Online (Online Ledger) Page Details](#khata-online-page)
+---
+<br>
+
+#### **Khata Online (Online Ledger) Page Details** {#khata-online-page}
+* **Purpose:** To provide a comprehensive daily or monthly financial summary (cash flow, profit/loss) for a selected branch. This acts as the main daybook/ledger for the business.
+* **Page URL:** `/reports/khata`
+* **Filters:**
+    | Filter Name | Field Type | Required |
+    | :--- | :--- | :--- |
+    | Branch | Dropdown | Yes |
+    | View Report By | Radio (Date / Month) | Yes |
+    | Date | Date Picker | Yes (if "Date" is selected) |
+    | Month | Month/Year Picker | Yes (if "Month" is selected)|
+
+* **Main Report Table:** A detailed breakdown of all transactions for the selected period.
+    | Column Header | Description | Data Source |
+    | :--- | :--- | :--- |
+    | Date | The date of the transactions. | Transaction `date` |
+    | Contanti (Cash) | Total cash received. | `Sales`, `Repairs` payments |
+    | Carta (Card) | Total card payments received. | `Sales`, `Repairs` payments |
+    | Paypal | Total PayPal payments received. | `Sales`, `Repairs` payments |
+    | Bonifico (Bank Transfer)| Total bank transfers received.| `Sales`, `Repairs` payments |
+    | **Total - IN** | Sum of all incoming payments.| `Contanti` + `Carta` + `Paypal` + `Bonifico`|
+    | Expense | Total general expenses. | `Expenses` module |
+    | **Total - Out** | Total payments made to suppliers.| `Product Purchases` module |
+    | **Profit / Loss** | Calculated profit for the day/month.| `(Total IN) - (Cost of Goods Sold) - (Expense)` |
+    | **In Hand** | Net cash change for the day/month.| `(Cash IN) - (Cash OUT)` |
+
+* **Summary Table (Footer):** Provides the grand totals for the entire selected period.
+    | Column Header | Description |
+    | :--- | :--- |
+    | Total In | Grand total of all income. |
+    | Total Out | Grand total of all supplier payments. |
+    | Expense | Grand total of all general expenses. |
+    | Profit/ Loss | Total net profit or loss. |
+    | Cash in Hand | Final net cash position. |
+
+---
+### **Field Deep Dives**
+
+##### **Total IN Calculation**
+* **Behavior:** This column aggregates all revenue received from completed `Sales` and payments for `Repair Jobs` within the selected period. It is broken down by the `Payment Method` used for each transaction.
+* **AI Context & Suggestions:** The backend needs to query multiple tables (`sales`, `repair_payments`) and group the results by date and payment method to generate this report accurately.
+
+##### **Profit / Loss Calculation**
+* **Behavior:** This shows the net profitability of the business.
+* **AI Context & Suggestions:** This is a complex calculation that differs from cash flow. The correct formula is `Profit = (Revenue) - (Cost of Goods Sold) - (General Expenses)`.
+    - **Revenue** is the `Total IN`.
+    - **Cost of Goods Sold (COGS)** is the `purchasePrice` of the items sold or used in repairs, *not* the `Total Out` (which is cash paid to suppliers). To calculate this accurately, every `SaleItem` and `SparePart` used must have its original `purchasePrice` recorded at the time of the transaction.
+    - **General Expenses** comes from the `Expenses` module.
+    The current system's UI might be simplifying this, but a robust new system should calculate true profit.
+
+##### **In Hand (Cash Flow) Calculation**
+* **Behavior:** This metric tracks the net change in physical cash.
+* **AI Context & Suggestions:** The formula is `Cash In Hand = (Total cash received from all sales/repairs) - (Total cash paid for General Expenses) - (Total cash paid for Product Purchases)`. This requires tracking the `paymentMethod` for all outgoing payments as well, a field that should be added to the `Expense` and `Product Purchase` modules. This metric is critical for day-to-day cash management.
+
+</details>
+
+
+
+
+
+<details>
+<summary><h3>4.7 Managerial Tasks & Reporting</h3></summary>
+
+This section covers high-level reporting and financial management tools, primarily for `Manager` and `Administrator` roles. This is the core of the system's accounting and business intelligence capabilities.
+
+#### **Master Data Models & Rules**
+This consolidated view describes the data structures for financial records.
+
+**Master Data Table: Transaction**
+* **AI Context:** This is one of the most important data models. A new `Transaction` record **must** be created automatically for every single financial event that occurs in the system, including:
+    - A completed inventory sale (`Sale`)
+    - A completed general sale
+    - A payment received for a repair (`Job`)
+    - A product purchase from a supplier (`Product Purchase`)
+    - A general expense (`Expense`)
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the transaction. |
+| `date` | DateTime | Yes | Timestamp of when the transaction occurred. |
+| `type` | String | Yes | "Income" or "Expense". |
+| `credit` | Number | No | The amount of money received (income). |
+| `debit` | Number | No | The amount of money paid out (cost of goods). |
+| `expense` | Number | No | The amount of a general expense (distinct from cost of goods). |
+| `paymentMethod`| String | Yes | How the money was paid/received (e.g., "Cash", "Card"). |
+| `referenceType`| String | Yes | The type of entity this transaction is linked to (e.g., "Sale", "Repair", "Purchase"). |
+| `referenceId` | String | Yes | The ID of the linked entity (e.g., the `Sale` ID or `Job` ID). |
+| `referenceDescription`| String | Yes | A human-readable description of the source (e.g., "Sale #22589"). |
+| `customerId` | String (Reference)| No | The customer or supplier associated with the transaction. |
+| `userId` | String (Reference)| Yes | The employee who recorded the transaction. |
+
+**Common Business Rules:**
+- The `Transaction` table is append-only. Records should never be deleted, only marked as voided or reversed through a counter-transaction to maintain a clean audit trail.
+- All financial reports, including the "Khata Online" page, are generated by aggregating data from this master `Transaction` table.
+
+---
+### **Page-Specific Views**
+* [Go to Transactions Page Details](#transactions-page)
+* [Go to Khata Online (Online Ledger) Page Details](#khata-online-page)
+
+---
+<br>
+
+#### **Transactions Page Details** {#transactions-page}
+* **Purpose:** To provide a detailed, searchable log of every financial transaction (income and expense) across the business. This is the master financial ledger.
+* **Page URL:** `/reports/transactions`
+* **Search Fields:**
+    | Field Name | Field Type |
+    | :--- | :--- |
+    | Transaction Type | Dropdown ("Income", "Expense") |
+    | Transaction Reference | Dropdown ("Acceptance", "E-Commerce Order", etc.) |
+    | Branch | Dropdown |
+    | Date From / To | Date Picker |
+    | Customer | Text Input |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | Date | `date` |
+    | Debit (Out) | `debit` |
+    | Expense | `expense` |
+    | Credit (In) | `credit` |
+    | Payment Method| `paymentMethod` |
+    | Reference | `referenceDescription` (with link to source) |
+    | Customer | `customer.name` |
+    | Saved By | `user.name` |
+* **Summary Footer:** The page must display a summary of totals based on the filtered results, including Total In (by payment method), Total Purchase, Profit/Loss, and Cash Flow (Cash In - Cash Out).
+
+<br>
+
+#### **Khata Online (Online Ledger) Page Details** {#khata-online-page}
+* **Purpose:** To provide a high-level daily or monthly financial summary of all transactions for a selected branch.
+* **Page URL:** `/reports/khata`
+* **Filters:**
+    | Filter Name | Field Type | Required |
+    | :--- | :--- | :--- |
+    | Branch | Dropdown | Yes |
+    | View Report By | Radio (Date / Month) | Yes |
+    | Date | Date Picker | Yes (if "Date" is selected) |
+    | Month | Month/Year Picker | Yes (if "Month" is selected)|
+* **Main Report Table:** A daily breakdown of aggregated transactions for the selected period.
+    | Column Header | Description |
+    | :--- | :--- |
+    | Date | The specific day. |
+    | Contanti (Cash) | Total cash received. |
+    | Carta (Card) | Total card payments received. |
+    | Paypal / Bonifico | Totals for other payment methods. |
+    | Total - IN | Sum of all incoming payments for that day. |
+    | Expense | Total general expenses for that day. |
+    | Total - Out | Total supplier payments for that day. |
+    | Profit / Loss | Calculated profit for that day. |
+    | In Hand | Net cash change for that day. |
+* **Summary Table (Footer):** Provides the grand totals for the entire selected period (e.g., the whole month), matching the fields in the main report table.
+
+</details>
+
+
+## 4.7 Managerial Tasks & Reporting (Updated)
+
+This section covers high-level reporting and financial management tools, primarily for `Manager` and `Administrator` roles. This is the core of the system's accounting and business intelligence capabilities.
+
+#### **Master Data Models & Rules**
+This consolidated view describes the data structures for financial records.
+
+**Master Data Table: Transaction**
+* **AI Context:** This is one of the most important data models. A new `Transaction` record **must** be created automatically for every single financial event in the system: a completed `Sale`, a `Repair` payment, a `Product Purchase`, a general `Expense`, and the purchase/sale of a `Tracked Device`.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the transaction. |
+| `date` | DateTime | Yes | Timestamp of when the transaction occurred. |
+| `type` | String | Yes | "Income" or "Expense". |
+| `credit` | Number | No | The amount of money received (income). |
+| `debit` | Number | No | The cost of goods sold (COGS) for the transaction. |
+| `expense` | Number | No | The amount of a general expense. |
+| `paymentMethod`| String | Yes | How the money was paid/received (e.g., "Cash", "Card"). |
+| `referenceType`| String | Yes | The source of the transaction (e.g., "Sale", "Repair", "Purchase"). |
+| `referenceId` | String | Yes | The ID of the linked entity (e.g., the `Sale` ID or `Job` ID). |
+| `referenceDescription`| String | Yes | A human-readable description of the source (e.g., "Sale #22589"). |
+| `customerId` | String (Reference)| No | The customer or supplier associated with the transaction. |
+| `userId` | String (Reference)| Yes | The employee who recorded the transaction. |
+
+**Common Business Rules:**
+- The `Transaction` table is append-only. Records should never be deleted, only marked as voided or reversed through a counter-transaction to maintain a clean audit trail.
+- All financial reports, including the "Khata Online" page, are generated by aggregating data from this master `Transaction` table.
+
+---
+### **Page-Specific Views**
+* [Go to Khata Online (Online Ledger) Page Details](#khata-online-page)
+* [Go to Transactions Page Details](#transactions-page)
+
+---
+<br>
+
+#### **Khata Online (Online Ledger) Page Details** {#khata-online-page}
+* **Purpose:** To provide a high-level daily or monthly financial summary of all transactions for a selected branch.
+* **Page URL:** `/reports/khata`
+* **Filters:** Branch, View Report By (Date/Month), Date/Month Picker.
+* **Main Report Table:** A daily breakdown of aggregated transactions.
+    | Column Header | Description |
+    | :--- | :--- |
+    | Date | The specific day. |
+    | Contanti (Cash) / Carta (Card) / etc. | Total income, broken down by payment method. |
+    | Total - IN | Sum of all incoming payments for that day. |
+    | Expense | Total general expenses for that day. |
+    | Total - Out | Total supplier payments (product purchases) for that day. |
+    | Profit / Loss | Calculated profit for that day `(Total IN - COGS - Expense)`. |
+    | In Hand | Net cash change for that day. |
+* **Summary Table (Footer):** Provides the grand totals for the entire selected period.
+
+<br>
+
+#### **Transactions Page Details** {#transactions-page}
+* **Purpose:** To provide a detailed, searchable log of every individual financial transaction (income and expense) across the business. This is the master financial ledger.
+* **Page URL:** `/reports/transactions`
+* **Search Fields:**
+    | Field Name | Field Type |
+    | :--- | :--- |
+    | Transaction Type | Dropdown ("Income", "Expense") |
+    | Transaction Reference | Dropdown ("Acceptance", "E-Commerce Order", etc.) |
+    | Branch | Dropdown |
+    | Date From / To | Date Picker |
+    | Customer | Text Input |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | Date | `date` |
+    | Debit (Out) | `debit` (Cost of Goods Sold) |
+    | Expense | `expense` |
+    | Credit (In) | `credit` |
+    | Payment Method| `paymentMethod` |
+    | Reference | `referenceDescription` (with link to source) |
+    | Customer | `customer.name` |
+    | Saved By | `user.name` |
+* **Summary Footer:** The page must display a summary of totals for the filtered results, including Total In (by payment method), Total Purchase, Profit/Loss, and Cash Flow (Cash In - Cash Out).
+
+<br>
+
+<details>
+<summary><h3>4.8 Tracking Device Management (Used Devices)</h3></summary>
+
+This module covers the workflow for buying and selling used devices. Each used device is treated as a unique, single-stock item with its own detailed record.
+
+#### **Master Fields & Business Rules**
+This consolidated view lists all fields related to a single tracked device.
+
+**Master Field Table: Tracked Device**
+| Field Name | Data Type | Appears On | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | `[List]` | Unique ID for the tracked device record. |
+| `deviceCategory`| String | `[List]`, `[Add/Edit]`| e.g., "Smartphone", "Tablet/iPad". Required. |
+| `brand` | String (Reference) | `[List]`, `[Add/Edit]`| The device brand. Required. |
+| `model` | String (Reference) | `[List]`, `[Add/Edit]`| The device model. Required. |
+| `imei` | String | `[List]`, `[Add/Edit]`| The IMEI or serial number. Required & must be unique. |
+| `purchasePrice`| Number | `[List]`, `[Add/Edit]`| The price paid to acquire the device. Required. |
+| `salePrice` | Number | `[List]`, `[Add/Edit]`| The standard selling price to a customer. Required. |
+| `resellerPrice`| Number | `[Add/Edit]` | A special price for other businesses/resellers. Required. |
+| `supplierId` | String (Reference) | `[Add/Edit]` | The person/entity from whom the device was bought. Required. |
+| `condition` | String | `[List]`, `[Add/Edit]`| "Used" or "New". Required. |
+| `grade` | String | `[Add/Edit]` | The cosmetic grade of the device (e.g., A+, A, B). |
+| `batteryHealth`| String | `[Add/Edit]` | The battery health percentage. |
+| `rom` / `ram` | String | `[Add/Edit]` | Device storage and memory specifications. |
+| `notes` | Text | `[Add/Edit]` | Any notes about the device's condition or history. |
+| `branchId` | String (Reference) | `[List]`, `[Add/Edit]`| The branch where the device is located. Required. |
+| `addToKhata` | Boolean | `[Add/Edit]` | If "Yes", a transaction is immediately added to the ledger for the purchase. |
+| `documents` | Array of Files | `[Add/Edit]` | Scanned documents like ID or invoice. |
+
+**Common Business Rules:**
+- Each tracked device is a unique entity. Its sale is a one-time event.
+- When a new device is added with "Add to Khata" set to "Yes", an expense transaction must be created in the master `Transaction` ledger.
+- When a tracked device is sold, an income transaction must be created in the master `Transaction` ledger.
+
+---
+### **Page-Specific Views**
+* [Go to Add New Device Page Details](#add-new-device-page)
+* [Go to Tracking Devices List Page Details](#tracking-devices-list-page)
+
+---
+<br>
+
+#### **Add New Device Page Details** {#add-new-device-page}
+* **Purpose:** To register a new used device into the system, typically after purchasing it from a customer or supplier.
+* **Page URL:** `/tracking/new`
+* **Fields on this Page:**
+
+| Field Label | Field Type | Required |
+| :--- | :--- | :--- |
+| Device Category| Dropdown | Yes |
+| Brand | Searchable Dropdown| Yes |
+| Model | Searchable Dropdown| Yes |
+| Device Type | Dropdown | No |
+| IMEI/Serial No | Text Input | Yes |
+| Color | Dropdown | Yes |
+| Grade | Text Input | No |
+| Battery Health | Text Input | No |
+| Purchase Price | Number Input | Yes |
+| Sale Price | Number Input | Yes |
+| Reseller Price | Number Input | Yes |
+| Supplier | Searchable Dropdown| Yes |
+| ROM / RAM / etc. | Text Inputs | No |
+| Note | Text Area | No |
+| Branch | Dropdown | Yes |
+| Touch Screen | Checkbox | No |
+| Box Included? | Radio (Yes/No) | No |
+| Charger Included?| Radio (Yes/No) | No |
+| Condition | Radio (Used/New) | Yes |
+| Add to Khata? | Radio (Yes/No) | Yes |
+| Document Type | Dropdown | No |
+| File 1 / 2 / 3 | File Upload | No |
+
+<br>
+
+#### **Tracking Devices List Page Details** {#tracking-devices-list-page}
+* **Purpose:** To view, search, and manage all used devices currently in stock.
+* **Page URL:** `/tracking`
+* **Search Fields:** Brand, Model, IMEI, Branch, Condition.
+* **Table Columns:** `Date`, `IMEI`, `Device Category`, `Brand`, `Model`, `Purchase Price`, `Sale Price`, `Status`.
+
+</details>
+
+
+
+
+<details>
+<summary><h3>4.7 Managerial Tasks & Reporting</h3></summary>
+
+This section covers high-level reporting and financial management tools, primarily for `Manager` and `Administrator` roles. This is the core of the system's accounting and business intelligence capabilities.
+
+#### **Master Data Models & Rules**
+This consolidated view describes the data structures for financial and logistical records.
+
+**Master Data Table: Transaction**
+* **AI Context:** A new `Transaction` record **must** be created automatically for every single financial event that occurs in the system: a completed `Sale`, a `Repair` payment, a `Product Purchase`, a general `Expense`, and the purchase/sale of a `Tracked Device`.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the transaction. |
+| `date` | DateTime | Yes | Timestamp of when the transaction occurred. |
+| `type` | String | Yes | "Income" or "Expense". |
+| `credit` | Number | No | The amount of money received (income). |
+| `debit` | Number | No | The cost of goods sold (COGS) for the transaction. |
+| `expense` | Number | No | The amount of a general expense. |
+| `paymentMethod`| String | Yes | How the money was paid/received. |
+| `referenceType`| String | Yes | The source of the transaction (e.g., "Sale", "Repair"). |
+| `referenceId` | String | Yes | The ID of the linked entity (e.g., the `Sale` ID). |
+| `referenceDescription`| String | Yes | A human-readable description of the source (e.g., "Sale #22589"). |
+| `customerId` | String (Reference)| No | The customer or supplier associated with the transaction. |
+| `userId` | String (Reference)| Yes | The employee who recorded the transaction. |
+
+**Master Data Table: DDT (Delivery Note)**
+* **AI Context:** A DDT (`Documento di Trasporto`) is a transport document. This feature is likely used for transferring goods between branches or to dealers/partners.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the DDT document. |
+| `date` | Date | Yes | The date the DDT was created. |
+| `dealerId` | String (Reference) | Yes | The ID of the `Dealer` (can be another branch or partner). |
+| `totalAmount` | Number | Yes | The total value of the items included in the DDT. |
+| `acceptanceIds`| Array of Strings | Yes | A list of `Acceptance Number`s being transferred. |
+
+**Common Business Rules:**
+- The `Transaction` table is append-only.
+- All financial reports are generated by aggregating data from the `Transaction` table.
+- A DDT must be generated to formally log the movement of repair jobs (devices) between locations.
+
+---
+### **Page-Specific Views**
+* [Go to Khata Online (Online Ledger) Page Details](#khata-online-page)
+* [Go to Transactions Page Details](#transactions-page)
+* [Go to DDT List Page Details](#ddt-list-page)
+
+---
+<br>
+
+#### **Khata Online (Online Ledger) Page Details** {#khata-online-page}
+* **Purpose:** To provide a high-level daily or monthly financial summary for a selected branch.
+* **Page URL:** `/reports/khata`
+* **Filters:** Branch, View Report By (Date / Month), Date/Month Picker.
+* **Main Report Table:** A daily breakdown of aggregated transactions. Columns include: `Date`, breakdown by payment method (`Cash`, `Card`, etc.), `Total IN`, `Expense`, `Total OUT`, `Profit/Loss`, `In Hand`.
+* **Summary Table (Footer):** Provides the grand totals for the entire selected period.
+
+<br>
+
+#### **Transactions Page Details** {#transactions-page}
+* **Purpose:** To provide a detailed, searchable log of every financial transaction.
+* **Page URL:** `/reports/transactions`
+* **Search Fields:** Transaction Type, Transaction Reference, Branch, Date From/To, Customer.
+* **Table Columns:** `Date`, `Debit (Out)`, `Expense`, `Credit (In)`, `Payment Method`, `Reference`, `Customer`, `Saved By`.
+
+<br>
+
+#### **DDT List Page Details** {#ddt-list-page}
+* **Purpose:** To view, search, and manage Delivery Notes (DDTs) for inter-branch transfers.
+* **Page URL:** `/reports/ddt`
+* **Search Fields:**
+    | Field Name | Field Type |
+    | :--- | :--- |
+    | Dealer Name | Dropdown |
+    | Acceptance Number | Text Input |
+    | Created Date From / To | Date Picker |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` (link to view/print the DDT) |
+    | Date | `date` |
+    | Dealer | `dealer.name` |
+    | Total Amount | `totalAmount` |
+    | Acceptance IDs | `acceptanceIds` |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.8 Tracking Device Management (Used Devices)</h3></summary>
+
+This module covers the complete workflow for buying and selling used devices. Unlike standard inventory products which are fungible (interchangeable), each tracked device is treated as a unique, single-stock item with its own detailed record and history.
+
+#### **Master Fields & Business Rules**
+This consolidated view lists all possible attributes of a single tracked device, combining information from the Add and List pages.
+
+**Master Data Table: Tracked Device**
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique internal ID for the device record. |
+| `purchaseDate` | DateTime | Yes | The timestamp when the device was added to the system. |
+| `deviceCategory`| String | Yes | e.g., "Smartphone", "Tablet/iPad", "PC/Laptop". |
+| `brand` | String (Reference) | Yes | The device brand (e.g., Apple, Samsung). |
+| `model` | String (Reference) | Yes | The device model. |
+| `imei` | String | Yes | The IMEI or serial number. Must be unique for unsold devices. |
+| `color` | String | Yes | The color of the device. |
+| `condition` | String | Yes | "Used" or "New". |
+| `grade` | String | No | The cosmetic grade of the device (e.g., A+, A, B). |
+| `batteryHealth`| String | No | The battery health percentage. |
+| **[Prices](#tracked-device-pricing-details)** | Number | Yes | Includes `purchasePrice`, `salePrice`, and `resellerPrice`. |
+| `supplierId` | String (Reference) | Yes | The person/entity from whom the device was bought. |
+| `rom` / `ram` | String | No | Device storage and memory specifications. |
+| `notes` | Text | No | Any notes about the device's condition or history. |
+| `branchId` | String (Reference) | Yes | The branch where the device is located. |
+| `status` | String | Yes | The current status of the device (e.g., "In Stock", "Sold"). |
+| **[Add to Khata](#add-to-khata-details)** | Boolean | Yes | If "Yes", a transaction is immediately added to the ledger. |
+| `documents` | Array of Files | No | Scanned documents like ID or original invoice. |
+
+**Common Business Rules:**
+- Each tracked device is a unique entity with a stock of 1. Its sale is a one-time event.
+- When a new device is added with "Add to Khata" set to "Yes", an expense transaction **must** be created in the master `Transaction` ledger.
+- When a tracked device is sold, an income transaction **must** be created, and the device's `status` must be updated to "Sold".
+
+---
+### **Page-Specific Views**
+* [Go to Add New Device Page Details](#add-new-device-page)
+* [Go to Tracking Devices List Page Details](#tracking-devices-list-page)
+
+---
+<br>
+
+#### **Add New Device Page Details** {#add-new-device-page}
+* **Purpose:** To register a new used device into the system, typically after purchasing it from a customer or supplier.
+* **Page URL:** `/tracking/new`
+* **Layout:** A three-column form layout.
+* **Fields on this Page:**
+
+| Field Label | Field Type | Required | Column |
+| :--- | :--- | :--- | :--- |
+| Device Category| Dropdown | Yes | Left |
+| Brand | Searchable Dropdown| Yes | Left |
+| Model | Searchable Dropdown| Yes | Left |
+| Device Type | Dropdown | No | Left |
+| IMEI/Serial No | Text Input | Yes | Left |
+| Color | Dropdown | Yes | Left |
+| Grade | Text Input | No | Left |
+| Battery Health | Text Input | No | Left |
+| Purchase Price | Number Input | Yes | Left |
+| Sale Price | Number Input | Yes | Left |
+| Reseller Price | Number Input | Yes | Left |
+| Supplier | Searchable Dropdown| Yes | Left |
+| ROM / RAM / Processor etc. | Text Inputs | No | Center |
+| Note | Text Area | No | Center |
+| Branch | Dropdown | Yes | Center |
+| Touch Screen | Checkbox | No | Right |
+| Box Included? | Radio (Yes/No) | No | Right |
+| Charger Included?| Radio (Yes/No) | No | Right |
+| Condition | Radio (Used/New) | Yes | Right |
+| Add to Khata? | Radio (Yes/No) | Yes | Right |
+| Document Type | Dropdown | No | Right |
+| File 1 / 2 / 3 | File Upload | No | Right |
+
+<br>
+
+#### **Tracking Devices List Page Details** {#tracking-devices-list-page}
+* **Purpose:** To view, search, and manage all used devices currently in stock or previously sold.
+* **Page URL:** `/tracking`
+* **Search Fields:** A comprehensive set of filters including `Device ID`, `IMEI`, `Model`, `Customer Name`, `Supplier`, `Condition`, `Purchase Date Range`, `Sale Date Range`, `Branch`, and flags like `Sold Items Only`. An "Expand/Close" button toggles the visibility of the search filter area.
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` |
+    | Purchase Date | `purchaseDate` |
+    | IMEI | `imei` |
+    | Suppliers | `supplier.name` |
+    | Purchase Price| `purchasePrice` |
+    | Brand | `brand` |
+    | Model | `model` |
+    | Color | `color` |
+    | Condition | `condition` |
+    | Capacity | `rom` and `ram` (Combined) |
+    | Links | Action links: Modify, Barcode, Purchase Invoice, Sale Invoice. |
+
+---
+
+### **Field Deep Dives**
+
+##### **Tracked Device Pricing Details** {#tracked-device-pricing-details}
+* **`Purchase Price`:** The cost of acquiring the used device. This is the `debit` for the "Add to Khata" transaction.
+* **`Sale Price`:** The standard selling price to a retail customer. This becomes the `credit` when the device is sold.
+* **`Reseller Price`:** A different selling price for B2B (business-to-business) customers.
+* **AI Context & Suggestions:** Profit calculation is `(Sale Price or Reseller Price) - Purchase Price`. The system must clearly track which price was used for the final transaction.
+
+##### **Add to Khata Details** {#add-to-khata-details}
+* **Behavior:** A "Yes/No" radio button.
+* **AI Context & Suggestions:** This is a critical integration point. If "Yes", upon saving the new device, the system must immediately create a new `Transaction` record with `type: "Expense"` and `debit: purchasePrice`. This ensures the purchase is reflected in all financial reports.
+
+</details>
+
+<details>
+<summary><h3>Managerial Tasks & Reporting (Updated)</h3></summary>
+
+*This section is updated to include the DDT List and a new `DDT` data model.*
+
+#### **Master Data Models & Rules**
+
+**Data Model: Transaction** *(...as previously defined...)*
+
+**Data Model: DDT (Delivery Note)**
+* **AI Context:** A DDT (`Documento di Trasporto`) is a transport document used to formally log the movement of goods (in this case, repair jobs) between different business locations (branches or partners).
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the DDT document. |
+| `date` | Date | Yes | The date the DDT was created. |
+| `dealerId` | String (Reference) | Yes | The ID of the `Dealer` or destination `Branch`. |
+| `totalAmount`| Number | Yes | The total value of the items included in the DDT. |
+| `acceptanceIds`| Array of Strings | Yes | A list of `Acceptance Number`s being transferred. |
+
+---
+### **Page-Specific Views**
+* [Go to Khata Online (Online Ledger) Page Details](#khata-online-page)
+* [Go to Transactions Page Details](#transactions-page)
+* [Go to DDT List Page Details](#ddt-list-page)
+
+---
+<br>
+
+#### **DDT List Page Details** {#ddt-list-page}
+* **Purpose:** To view, search, and manage Delivery Notes (DDTs) for inter-branch transfers of repair jobs.
+* **Page URL:** `/reports/ddt`
+* **Search Fields:**
+    | Field Name | Field Type |
+    | :--- | :--- |
+    | Dealer Name | Dropdown |
+    | Acceptance Number | Text Input |
+    | Created Date From / To | Date Picker |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` (link to view/print the DDT) |
+    | Date | `date` |
+    | Dealer | `dealer.name` |
+    | Total Amount | `totalAmount` |
+    | Acceptance IDs | `acceptanceIds` |
+
+*(...other pages in this section as previously defined...)*
+
+</details>
+
+
+<details>
+<summary><h3>4.7 Managerial Tasks & Reporting</h3></summary>
+
+This section covers high-level reporting and financial management tools, primarily for `Manager` and `Administrator` roles. This is the core of the system's accounting, HR, and business intelligence capabilities.
+
+#### **Master Data Models & Rules**
+This consolidated view describes the data structures for financial and logistical records.
+
+**Master Data Table: Transaction**
+* **AI Context:** A new `Transaction` record **must** be created automatically for every single financial event in the system: a completed `Sale`, a `Repair` payment, a `Product Purchase`, a general `Expense`, and the purchase/sale of a `Tracked Device`.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the transaction. |
+| `date` | DateTime | Yes | Timestamp of when the transaction occurred. |
+| `type` | String | Yes | "Income" or "Expense". |
+| `credit` | Number | No | The amount of money received (income). |
+| `debit` | Number | No | The cost of goods sold (COGS) for the transaction. |
+| `expense` | Number | No | The amount of a general expense. |
+| `paymentMethod`| String | Yes | How the money was paid/received. |
+| `referenceType`| String | Yes | The source of the transaction (e.g., "Sale", "Repair"). |
+| `referenceId` | String | Yes | The ID of the linked entity (e.g., the `Sale` ID). |
+| `referenceDescription`| String | Yes | A human-readable description of the source (e.g., "Sale #22589"). |
+| `customerId` | String (Reference)| No | The customer or supplier associated with the transaction. |
+| `userId` | String (Reference)| Yes | The employee who recorded the transaction. |
+
+**Master Data Table: DDT (Delivery Note)**
+* **AI Context:** A DDT (`Documento di Trasporto`) is a transport document used to formally log the movement of goods (in this case, repair jobs) between different business locations (branches or partners).
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the DDT document. |
+| `date` | Date | Yes | The date the DDT was created. |
+| `dealerId` | String (Reference) | Yes | The ID of the `Dealer` or destination `Branch`. |
+| `totalAmount` | Number | Yes | The total value of the items included in the DDT. |
+| `acceptanceIds`| Array of Strings | Yes | A list of `Acceptance Number`s being transferred. |
+
+**Master Data Table: Attendance**
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the attendance record. |
+| `userId` | String (Reference) | Yes | The ID of the employee (`User`) checking in. |
+| `branchId` | String (Reference) | Yes | The ID of the `Branch` where the check-in occurred. |
+| `date` | DateTime | Yes | The exact timestamp of the check-in. |
+
+**Common Business Rules:**
+- The `Transaction` table is append-only for a clean audit trail.
+- All financial reports are generated by aggregating data from the `Transaction` table.
+- A DDT must be generated to formally log the movement of repair jobs between locations.
+- The `Attendance` system should ideally have a simple "Clock In" button on the dashboard for employees to record their presence.
+
+---
+### **Page-Specific Views**
+* [Go to Khata Online (Online Ledger) Page Details](#khata-online-page)
+* [Go to Transactions Page Details](#transactions-page)
+* [Go to DDT List Page Details](#ddt-list-page)
+* [Go to Attendances Page Details](#attendances-page)
+
+---
+<br>
+
+#### **Khata Online (Online Ledger) Page Details** {#khata-online-page}
+* **Purpose:** To provide a high-level daily or monthly financial summary for a selected branch.
+* **Page URL:** `/reports/khata`
+* **Filters:** Branch, View Report By (Date / Month), Date/Month Picker.
+* **Main Report Table:** A daily breakdown of aggregated transactions. Columns include: `Date`, breakdown by payment method (`Cash`, `Card`, etc.), `Total IN`, `Expense`, `Total OUT`, `Profit/Loss`, `In Hand`.
+* **Summary Table (Footer):** Provides the grand totals for the entire selected period.
+
+<br>
+
+#### **Transactions Page Details** {#transactions-page}
+* **Purpose:** To provide a detailed, searchable log of every financial transaction.
+* **Page URL:** `/reports/transactions`
+* **Search Fields:** Transaction Type, Transaction Reference, Branch, Date From/To, Customer.
+* **Table Columns:** `Date`, `Debit (Out)`, `Expense`, `Credit (In)`, `Payment Method`, `Reference`, `Customer`, `Saved By`.
+
+<br>
+
+#### **DDT List Page Details** {#ddt-list-page}
+* **Purpose:** To view, search, and manage Delivery Notes (DDTs) for inter-branch transfers of repair jobs.
+* **Page URL:** `/reports/ddt`
+* **Search Fields:**
+    | Field Name | Field Type |
+    | :--- | :--- |
+    | Dealer Name | Dropdown |
+    | Acceptance Number | Text Input |
+    | Created Date From / To | Date Picker |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` (link to view/print the DDT) |
+    | Date | `date` |
+    | Dealer | `dealer.name` |
+    | Total Amount | `totalAmount` |
+    | Acceptance IDs | `acceptanceIds` |
+
+<br>
+
+#### **Attendances Page Details** {#attendances-page}
+* **Purpose:** To view and filter employee attendance records.
+* **Page URL:** `/reports/attendances`
+* **Search Fields:**
+    | Field Name | Field Type |
+    | :--- | :--- |
+    | Employee | Dropdown |
+    | Branch | Dropdown |
+    | Date From / To | Date Picker |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | Name | `user.name` |
+    | Branch | `branch.name` |
+    | Date | `date` |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.7 Managerial Tasks & Reporting</h3></summary>
+
+This section covers high-level reporting and financial management tools, primarily for `Manager` and `Administrator` roles. This is the core of the system's accounting, HR, and business intelligence capabilities.
+
+#### **Master Data Models & Rules**
+This consolidated view describes the data structures for financial, logistical, and HR records.
+
+**Master Data Table: Transaction** *(...as previously defined...)*
+
+**Master Data Table: DDT (Delivery Note)** *(...as previously defined...)*
+
+**Master Data Table: Attendance**
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the attendance record. |
+| `userId` | String (Reference) | Yes | The ID of the employee (`User`) checking in. |
+| `branchId` | String (Reference) | Yes | The ID of the `Branch` where the check-in occurred. |
+| `timestamp` | DateTime | Yes | The exact timestamp of the check-in event. |
+
+**Common Business Rules:**
+- The `Transaction` table is append-only for a clean audit trail.
+- All financial reports are generated by aggregating data from the `Transaction` table.
+- A DDT must be generated to formally log the movement of repair jobs between locations.
+- The `Attendance` system should ideally have a simple "Clock In" button on the dashboard for employees to record their presence.
+
+---
+### **Page-Specific Views**
+* [Go to Khata Online (Online Ledger) Page Details](#khata-online-page)
+* [Go to Transactions Page Details](#transactions-page)
+* [Go to DDT List Page Details](#ddt-list-page)
+* [Go to Attendances Page Details](#attendances-page)
+* [Go to Employee Performance (Track Record) Page Details](#employee-performance-page)
+
+---
+<br>
+
+#### **Khata Online (Online Ledger) Page Details** {#khata-online-page}
+* **Purpose:** To provide a high-level daily or monthly financial summary for a selected branch.
+* **Page URL:** `/reports/khata`
+* **Filters:** Branch, View Report By (Date / Month), Date/Month Picker.
+* **Main Report Table:** A daily breakdown of aggregated transactions. Columns include: `Date`, breakdown by payment method (`Cash`, `Card`, etc.), `Total IN`, `Expense`, `Total OUT`, `Profit/Loss`, `In Hand`.
+* **Summary Table (Footer):** Provides the grand totals for the entire selected period.
+
+<br>
+
+#### **Transactions Page Details** {#transactions-page}
+* **Purpose:** To provide a detailed, searchable log of every financial transaction.
+* **Page URL:** `/reports/transactions`
+* **Search Fields:** Transaction Type, Transaction Reference, Branch, Date From/To, Customer.
+* **Table Columns:** `Date`, `Debit (Out)`, `Expense`, `Credit (In)`, `Payment Method`, `Reference`, `Customer`, `Saved By`.
+
+<br>
+
+#### **DDT List Page Details** {#ddt-list-page}
+* **Purpose:** To view, search, and manage Delivery Notes (DDTs) for inter-branch transfers of repair jobs.
+* **Page URL:** `/reports/ddt`
+* **Search Fields:** Dealer Name, Acceptance Number, Created Date From/To.
+* **Table Columns:** `ID`, `Date`, `Dealer`, `Total Amount`, `Acceptance IDs`.
+
+<br>
+
+#### **Attendances Page Details** {#attendances-page}
+* **Purpose:** To view and filter employee attendance records (clock-ins).
+* **Page URL:** `/reports/attendances`
+* **Search Fields:**
+    | Filter Name | Field Type |
+    | :--- | :--- |
+    | Employee | Dropdown |
+    | Branch | Dropdown |
+    | Date From / To | Date Picker |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | Name | `user.name` |
+    | Branch | `branch.name` |
+    | Date | `timestamp` |
+
+<br>
+
+#### **Employee Performance (Track Record) Page Details** {#employee-performance-page}
+* **Purpose:** To view a performance report for a specific technician over a selected period.
+* **Page URL:** `/reports/employee-performance`
+* **Filters:**
+    | Filter Name | Field Type | Required |
+    | :--- | :--- | :--- |
+    | Technician Name | Dropdown | Yes |
+    | View Report By | Radio (Date / Month) | Yes |
+    | Date / Month | Date or Month Picker | Yes |
+* **Report Content (Output):** *(Note: The output is not visible in the screenshot, but a logical report would contain the following metrics for the selected technician and period.)*
+    - Total Jobs Assigned
+    - Total Jobs Completed
+    - Average Repair Time
+    - Total Revenue Generated (from their completed jobs)
+    - Total Profit Generated (from their completed jobs)
+    - A list of all jobs they worked on during the period.
+
+---
+
+### **Field Deep Dives**
+
+##### **Employee Performance Calculation** {#employee-performance-details}
+* **Behavior:** This is a complex aggregation report. It requires the system to query multiple data sources and link them to a specific user.
+* **AI Context & Suggestions:** To generate this report, the backend must:
+    1.  Filter all `Jobs` where `technicianId` matches the selected user and the job's date falls within the selected period.
+    2.  Calculate metrics like `COUNT(Jobs)` for assigned/completed totals.
+    3.  Calculate `AVG(deliveryDate - repairDate)` for average repair time.
+    4.  Filter the `Transactions` table to find all income transactions where `referenceType` is "Repair" and the `referenceId` matches the technician's completed jobs.
+    5.  Sum the `credit` and `debit` from these transactions to calculate total revenue and profit for that employee. This is a powerful feature for measuring productivity and profitability per employee.
+
+</details>
+
+
+
+<details>
+<summary><h3>4.2 Sales Management</h3></summary>
+
+This section contains all requirements for processing sales transactions. The system must support two distinct types of sales: a comprehensive, inventory-linked Point of Sale (POS) system and a simple form for general, non-inventory sales. It also includes management for orders originating from an e-commerce platform.
+
+#### **Master Fields & Business Rules**
+This consolidated view helps with database design by listing all fields related to sales transactions.
+
+**Master Field Table: Sale**
+| Field Name | Data Type | Appears On | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| **[Customer](#sale-customer-details)** | Reference (Customer ID) | `[Inventory Sale]`, `[Online Order]`, `[Sales History]` | The customer making the purchase. Required. Defaults to a "Walk-in Customer" for POS. |
+| **[Items (Sales Cart)](#sales-cart-details)** | Array of Objects | `[Inventory Sale]`, `[Online Order]` | A list of products from inventory being sold. |
+| **[Product (Manual Entry)](#general-sale-details)**| String | `[General Sale]` | Manually entered product name for a non-inventory sale. |
+| **[Purchase Price (Manual)](#general-sale-details)**| Number | `[General Sale]` | Manually entered cost of the item for a general sale to calculate profit. |
+| [Payment Method](#) | String | `[All Sales]` | Method of payment (e.g., "Cash", "Card"). Required. |
+| [Paid Amount](#) | Number | `[All Sales]` | The amount paid by the customer. Required. |
+| [Order Note](#) | Text | `[Inventory Sale]`, `[Online Order]` | Optional notes related to the entire order. |
+| **[Order Status](#order-status-details)** | String | `[Online Order]` | The fulfillment status of an online order (e.g., "Pending", "Completed"). |
+| **[Payment Status](#payment-status-details)** | String | `[Online Order]` | The payment status of an online order (e.g., "Received", "Pending"). |
+
+**Common Business Rules:**
+- All sales must generate an immutable transaction record.
+- Inventory-linked sales **must** automatically deduct the sold quantity from the `Product` stock upon completion.
+- The system must handle VAT calculations (e.g., +22%) for all inventory-linked sales.
+- Profit for each sale should be calculated and stored.
+
+---
+### **Page-Specific Views**
+These sections show the exact fields and layout for each individual page for easy verification.
+
+* [Go to New Inventory Sale Page Details](#new-inventory-sale-page)
+* [Go to New General Sale Page Details](#new-general-sale-page)
+* [Go to Sales History Page Details](#sales-history-page)
+* [Go to E-Commerce Orders List Page Details](#ecommerce-orders-list-page)
+
+---
+<br>
+
+#### **New Inventory Sale Page Details** {#new-inventory-sale-page}
+* **Purpose:** A POS interface for selling products from inventory in-store.
+* **Page URL:** `/sales/new`
+* **Layout:** Two-column layout (Product Search/Cart on left, Order/Payment on right).
+* **Components & Fields:** Product Search Bar, Sales Cart Table, Order Summary Panel (Customer, Totals, Discount, Payment), `Complete Sale` button.
+
+<br>
+
+#### **New General Sale Page Details** {#new-general-sale-page}
+* **Purpose:** A simple form for quickly logging non-inventory sales.
+* **Page URL:** `/sales/general`
+* **Fields:** Client, Product, Branch, Paid Amount, Purchase Price, Payment Method.
+
+<br>
+
+#### **Sales History Page Details** {#sales-history-page}
+* **Purpose:** To view a list of all past sales transactions.
+* **Page URL:** `/sales`
+* **Table Columns:** `Sale ID`, `Date`, `Customer ID`, `Items`, `Total Amount`, `Payment Method`.
+
+<br>
+
+#### **E-Commerce Orders List Page Details** {#ecommerce-orders-list-page}
+* **Purpose:** To manage all orders originating from the e-commerce website.
+* **Page URL:** `/sales/online-orders`
+* **Search Fields:**
+    | Filter Name | Field Type |
+    | :--- | :--- |
+    | Payment Status | Dropdown (e.g., "Any", "Received") |
+    | Order Status | Dropdown (e.g., "Any", "Completed", "Pending") |
+    | Contact Name | Text Input |
+    | Order Number | Text Input |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | Serial | Row number |
+    | Order ID | `id` |
+    | Order Total | `totalAmount` |
+    | Name | `customer.name` |
+    | Mobile | `customer.phone` |
+    | Order Status | `orderStatus` |
+    | Payment Status| `paymentStatus` |
+    | Submitted date| `createdDate` |
+    | Updated date | `updatedDate` |
+    | Actions | Links (View Order, Edit Order, Invoice) |
+
+---
+
+### **Field Deep Dives**
+
+##### **Order Status Details** {#order-status-details}
+* **Behavior:** Represents the physical state of an online order in the fulfillment process.
+* **Values:** `Pending`, `Processing`, `Payment Received`, `Waiting to Deliver`, `Completed`, `Canceled`.
+* **AI Context & Suggestions:** This is a state machine. The status should only be allowed to change in a logical sequence (e.g., from `Pending` to `Processing`, but not directly to `Completed`). The list of statuses should be configurable in **System Settings**.
+
+##### **Payment Status Details** {#payment-status-details}
+* **Behavior:** Represents the financial state of an online order.
+* **Values:** `Pending`, `Received`, `Refunded`.
+* **AI Context & Suggestions:** Changing the `Payment Status` to "Received" must trigger the creation of an "Income" record in the master `Transaction` table. This is the key link between the e-commerce module and the accounting system.
+
+*(...other deep dives as previously defined...)*
+
+</details>
+
+
+
+
+
+<details>
+<summary><h3>4.7 Managerial Tasks & Reporting</h3></summary>
+
+This section covers high-level reporting and financial management tools, primarily for `Manager` and `Administrator` roles. This is the core of the system's accounting, HR, and business intelligence capabilities.
+
+#### **Master Data Models & Rules**
+This consolidated view describes the data structures for financial, logistical, and HR records.
+
+**Master Data Table: Transaction**
+* **AI Context:** A new `Transaction` record **must** be created automatically for every single financial event in the system: a completed `Sale`, a `Repair` payment, a `Product Purchase`, a general `Expense`, and the purchase/sale of a `Tracked Device`.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the transaction. |
+| `date` | DateTime | Yes | Timestamp of when the transaction occurred. |
+| `type` | String | Yes | "Income" or "Expense". |
+| `credit` | Number | No | The amount of money received (income). |
+| `debit` | Number | No | The cost of goods sold (COGS) for the transaction. |
+| `expense` | Number | No | The amount of a general expense. |
+| `paymentMethod`| String | Yes | How the money was paid/received. |
+| `referenceType`| String | Yes | The source of the transaction (e.g., "Sale", "Repair"). |
+| `referenceId` | String | Yes | The ID of the linked entity (e.g., the `Sale` ID). |
+| `referenceDescription`| String | Yes | A human-readable description of the source (e.g., "Sale #22589"). |
+| `customerId` | String (Reference)| No | The customer or supplier associated with the transaction. |
+| `userId` | String (Reference)| Yes | The employee who recorded the transaction. |
+
+**Master Data Table: DDT (Delivery Note)**
+* **AI Context:** A DDT (`Documento di Trasporto`) is a transport document used to formally log the movement of goods (in this case, repair jobs) between different business locations (branches or partners).
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the DDT document. |
+| `date` | Date | Yes | The date the DDT was created. |
+| `dealerId` | String (Reference) | Yes | The ID of the `Dealer` or destination `Branch`. |
+| `totalAmount` | Number | Yes | The total value of the items included in the DDT. |
+| `acceptanceIds`| Array of Strings | Yes | A list of `Acceptance Number`s being transferred. |
+
+**Master Data Table: Attendance**
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the attendance record. |
+| `userId` | String (Reference) | Yes | The ID of the employee (`User`) checking in. |
+| `branchId` | String (Reference) | Yes | The ID of the `Branch` where the check-in occurred. |
+| `timestamp` | DateTime | Yes | The exact timestamp of the check-in event. |
+
+**Common Business Rules:**
+- The `Transaction` table is append-only for a clean audit trail.
+- All financial reports are generated by aggregating data from the `Transaction` table.
+- A DDT must be generated to formally log the movement of repair jobs between locations.
+- The `Attendance` system should ideally have a simple "Clock In" button on the dashboard for employees to record their presence.
+
+---
+### **Page-Specific Views**
+* [Go to Khata Online (Online Ledger) Page Details](#khata-online-page)
+* [Go to Transactions Page Details](#transactions-page)
+* [Go to DDT List Page Details](#ddt-list-page)
+* [Go to Attendances Page Details](#attendances-page)
+* [Go to Employee Performance (Track Record) Page Details](#employee-performance-page)
+
+---
+<br>
+
+#### **Khata Online (Online Ledger) Page Details** {#khata-online-page}
+* **Purpose:** To provide a high-level daily or monthly financial summary for a selected branch.
+* **Page URL:** `/reports/khata`
+* **Filters:** Branch, View Report By (Date / Month), Date/Month Picker.
+* **Main Report Table:** A daily breakdown of aggregated transactions. Columns include: `Date`, breakdown by payment method (`Cash`, `Card`, etc.), `Total IN`, `Expense`, `Total OUT`, `Profit/Loss`, `In Hand`.
+* **Summary Table (Footer):** Provides the grand totals for the entire selected period.
+
+<br>
+
+#### **Transactions Page Details** {#transactions-page}
+* **Purpose:** To provide a detailed, searchable log of every financial transaction.
+* **Page URL:** `/reports/transactions`
+* **Search Fields:** Transaction Type, Transaction Reference, Branch, Date From/To, Customer.
+* **Table Columns:** `Date`, `Debit (Out)`, `Expense`, `Credit (In)`, `Payment Method`, `Reference`, `Customer`, `Saved By`.
+
+<br>
+
+#### **DDT List Page Details** {#ddt-list-page}
+* **Purpose:** To view, search, and manage Delivery Notes (DDTs) for inter-branch transfers of repair jobs.
+* **Page URL:** `/reports/ddt`
+* **Search Fields:** Dealer Name, Acceptance Number, Created Date From/To.
+* **Table Columns:** `ID`, `Date`, `Dealer`, `Total Amount`, `Acceptance IDs`.
+
+<br>
+
+#### **Attendances Page Details** {#attendances-page}
+* **Purpose:** To view and filter employee attendance records (clock-ins).
+* **Page URL:** `/reports/attendances`
+* **Search Fields:**
+    | Filter Name | Field Type |
+    | :--- | :--- |
+    | Employee | Dropdown |
+    | Branch | Dropdown |
+    | Date From / To | Date Picker |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | Name | `user.name` |
+    | Branch | `branch.name` |
+    | Date | `timestamp` |
+
+<br>
+
+#### **Employee Performance (Track Record) Page Details** {#employee-performance-page}
+* **Purpose:** To view a performance report for a specific technician over a selected period.
+* **Page URL:** `/reports/employee-performance`
+* **Filters:**
+    | Filter Name | Field Type | Required |
+    | :--- | :--- | :--- |
+    | Technician Name | Dropdown | Yes |
+    | View Report By | Radio (Date / Month) | Yes |
+    | Date / Month | Date or Month Picker | Yes |
+* **Report Content (Output):** *(Note: The output is not visible in the screenshot, but a logical report would contain the following metrics for the selected technician and period.)*
+    - Total Jobs Assigned
+    - Total Jobs Completed
+    - Average Repair Time
+    - Total Revenue Generated (from their completed jobs)
+    - Total Profit Generated (from their completed jobs)
+    - A list of all jobs they worked on during the period.
+
+---
+
+### **Field Deep Dives**
+
+##### **Employee Performance Calculation** {#employee-performance-details}
+* **Behavior:** This is a complex aggregation report. It requires the system to query multiple data sources and link them to a specific user.
+* **AI Context & Suggestions:** To generate this report, the backend must:
+    1.  Filter all `Jobs` where `technicianId` matches the selected user and the job's date falls within the selected period.
+    2.  Calculate metrics like `COUNT(Jobs)` for assigned/completed totals.
+    3.  Calculate `AVG(deliveryDate - repairDate)` for average repair time.
+    4.  Filter the `Transactions` table to find all income transactions where `referenceType` is "Repair" and the `referenceId` matches the technician's completed jobs.
+    5.  Sum the `credit` and `debit` from these transactions to calculate total revenue and profit for that employee. This is a powerful feature for measuring productivity and profitability per employee.
+
+</details>
+
+
+
+<details>
+<summary><h3>4.2 Sales Management</h3></summary>
+
+This section contains all requirements for processing sales and orders. It covers Point of Sale (POS), general sales, e-commerce orders, and spare parts ordering.
+
+#### **Master Data Models & Rules**
+This consolidated view describes the data structures for sales and orders.
+
+**Master Data Table: Sale** *(...as previously defined...)*
+
+**Master Data Table: Part Order**
+* **AI Context:** This model represents a request to purchase a specific spare part, often for a particular customer's repair job. It tracks the item needed and the associated costs.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the part order record. |
+| `brand` | String (Reference) | Yes | The brand of the device the part is for. |
+| `model` | String (Reference) | Yes | The model of the device. |
+| `productName` | String | Yes | The name of the spare part being ordered. |
+| `color` | String (Reference) | No | The color of the part, if applicable. |
+| `quantity` | Integer | Yes | The quantity of the part being ordered. |
+| `acceptanceNumber`| String | No | Optional link to the `Job` (repair) that requires this part. |
+| `supplierDetails`| String | No | Free-text details about the supplier for this specific order. |
+| `isUrgent` | Boolean | Yes | Flag to mark the order as urgent. |
+| `customerId` | String (Reference) | No | Optional link to the customer for whom the part is ordered. |
+| `paymentMethod`| String | No | How the part was paid for. |
+| `totalAmount` | Number | No | The total cost of the order. |
+| `paidAmount` | Number | No | The amount paid upfront for the part. |
+| `purchasePrice`| Number | No | The cost (expense) associated with acquiring the part. |
+| `notes` | Text | No | Additional notes about the order. |
+| `orderType` | String | Yes | The type of item being ordered: "Accessori", "DEVICE", or "RICAMBI". |
+
+---
+### **Page-Specific Views**
+* [Go to New Inventory Sale Page Details](#new-inventory-sale-page)
+* [Go to New General Sale Page Details](#new-general-sale-page)
+* [Go to Sales History Page Details](#sales-history-page)
+* [Go to E-Commerce Orders List Page Details](#ecommerce-orders-list-page)
+* [Go to Submit Spare Parts Order Page Details](#submit-spare-parts-order-page)
+
+---
+<br>
+
+#### **New Inventory Sale Page Details** {#new-inventory-sale-page}
+*(...as previously defined...)*
+
+<br>
+
+#### **New General Sale Page Details** {#new-general-sale-page}
+*(...as previously defined...)*
+
+<br>
+
+#### **Sales History Page Details** {#sales-history-page}
+*(...as previously defined...)*
+
+<br>
+
+#### **E-Commerce Orders List Page Details** {#ecommerce-orders-list-page}
+*(...as previously defined...)*
+
+<br>
+
+#### **Submit Spare Parts Order Page Details** {#submit-spare-parts-order-page}
+* **Purpose:** To create a record for a spare part that needs to be ordered from a supplier, often linked to a specific repair job.
+* **Page URL:** `/sales/order-parts/new`
+* **Layout:** A two-column form layout.
+* **Fields on this Page:**
+    | Field Label | Field Type | Required | Column |
+    | :--- | :--- | :--- | :--- |
+    | Brand | Searchable Dropdown | Yes | Left |
+    | Model | Searchable Dropdown | Yes | Left |
+    | Product | Text Input | Yes | Left |
+    | Color | Dropdown | No | Left |
+    | Quantity | Number Input | Yes | Left |
+    | Acceptance Number| Text Input | No | Left |
+    | Supplier Details | Text Input | No | Left |
+    | Urgent? | Radio (Yes/No) | No | Left |
+    | Customer Name | Searchable Dropdown | No | Right |
+    | Payment Method | Dropdown | No | Right |
+    | Payment Receipt Number| Text Input | No | Right |
+    | Total Amount | Number Input | No | Right |
+    | Paid Amount | Number Input | No | Right |
+    | Expense / Purchase Price | Number Input | No | Right |
+    | Additional Note| Text Area | No | Right |
+    | Order Parts Type| Radio ("Accessori", "DEVICE", "RICAMBI") | Yes | Right |
+
+---
+
+### **Field Deep Dives**
+
+*(...other deep dives as previously defined...)*
+
+</details>
+
+
+
+<details>
+<summary><h3>4.9 E-Commerce Management</h3></summary>
+
+This section details the features for managing products and orders for an external e-commerce website. This is distinct from the in-store POS (`Vendite Magazzino`) and general sales.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: E-Commerce Product**
+* **AI Context:** This model represents a product that is available for sale on the online store. It has its own pricing, stock, and descriptive information separate from the internal-only products.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `productId` | String | Yes | Unique identifier for the product. |
+| `sku` | String | Yes | Stock Keeping Unit. Must be unique. Auto-generated on save. |
+| `productName` | String | Yes | The public-facing name of the product. |
+| `productCategory`| String (Reference)| Yes | The category the product belongs to (e.g., "RICAMBI", "ALIMENTATORI"). |
+| `brand` | String (Reference)| Yes | The product's brand. |
+| `model` | String (Reference)| Yes | The product model it is associated with. |
+| `isSolidDevice`| Boolean | Yes | A flag, likely to distinguish parts/accessories from whole devices. |
+| `purchasePrice`| Number | Yes | The cost to acquire one unit of this product. |
+| `desktopPrice` | Number | Yes | The price for in-store (desktop) sales. |
+| `onlinePrice` | Number | Yes | The price for e-commerce sales. |
+| `color` | String (Reference)| No | The color of the product. |
+| `stock` | Integer | Yes | The current inventory level for this product. |
+| `productImages`| Array of Files | No | Images of the product for the website. |
+| `compatibleModels`| Array of Strings| No | A list of other models this product is compatible with. |
+| `productMeta` | Array of Strings| No | Flags for marketing, like "Latest Product", "Top Selling", "On Offer". |
+| `lastEdited` | DateTime | Yes | Timestamp of the last time the product was updated. |
+
+**Common Business Rules:**
+- When an e-commerce order is completed and payment is received, a corresponding `Transaction` must be created.
+- The `stock` level for an `E-Commerce Product` must be automatically decremented when an order is fulfilled.
+
+---
+### **Page-Specific Views**
+* [Go to E-Commerce Product List Page Details](#ecommerce-product-list-page)
+* [Go to Add New E-Commerce Product Page Details](#add-ecommerce-product-page)
+
+---
+<br>
+
+#### **E-Commerce Product List Page Details** {#ecommerce-product-list-page}
+* **Purpose:** To view, search, manage, and perform bulk operations on all products listed in the e-commerce system.
+* **Page URL:** `/admin/products/e-commerce`
+* **Search Fields:** A comprehensive set of filters including `SKU`, `Product Name`, `Category`, `Brand`, `Model`, `Condition`, `Stock`, `Price`, and marketing tags.
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | SL# / Checkbox | Row number and a checkbox for bulk operations. |
+    | Image | `productImages` (thumbnail) |
+    | Product Name | `productName` (links to the product's public page) |
+    | Color | `color` |
+    | SKU | `sku` |
+    | Category | `productCategory` |
+    | Brand | `brand` |
+    | Desk (Price) | `desktopPrice` |
+    | Online (Price)| `onlinePrice` |
+    | Purchase (Price)|`purchasePrice` |
+    | Stock | `stock` |
+    | Last Edited | `lastEdited` |
+    | Link | Action links: Stamp (Barcode), View, H.Stock (Home Stock), History, Edit, Delete. |
+* **Bulk Operations:** Users can select multiple products and execute an action (e.g., "Update node alias", "Download Selected Product").
+
+<br>
+
+#### **Add New E-Commerce Product Page Details** {#add-ecommerce-product-page}
+* **Purpose:** To create a new product for the e-commerce store.
+* **Page URL:** `/admin/products/e-commerce/new`
+* **Layout:** A multi-column form with various sections.
+* **Fields on this Page:**
+    | Field Label | Field Type | Required |
+    | :--- | :--- | :--- |
+    | Product | Text Input | Yes |
+    | SKU | Text (Auto-generated) | - |
+    | Product Category | Dropdown (with Add button) | Yes |
+    | Is Solid Device? | Dropdown (Yes/No) | No |
+    | IMEI Number | Text Input | No |
+    | Purchase Price | Number Input (EUR) | Yes |
+    | Desktop Price | Number Input (EUR) | Yes |
+    | Online Price | Number Input (EUR) | Yes |
+    | Box Number | Dropdown | No |
+    | Color | Dropdown | No |
+    | Stock | Number Input | No |
+    | Product Images | File Upload | No |
+    | Compatible Models | Autocomplete Text Input | No |
+    | Product Description | Rich Text Editor | No |
+    | Product Brand | Dropdown (with Add button) | Yes |
+    | Product Model | Dropdown (with Add button) | No |
+    | Product Condition | Dropdown | No |
+    | Product Meta | Checkboxes (Show Offer, Latest, Popular) | No |
+    | Product Tags | Autocomplete Text Input | No |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.9 E-Commerce Management</h3></summary>
+
+This section details the features for managing products and orders for an external e-commerce website. This is distinct from the in-store POS (`Vendite Magazzino`) and general sales.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: E-Commerce Product**
+* **AI Context:** This model represents a product that is available for sale on the online store. It has its own pricing, stock, and descriptive information separate from the internal-only products.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `productId` | String | Yes | Unique identifier for the product. |
+| `sku` | String | Yes | Stock Keeping Unit. Must be unique. Auto-generated on save. |
+| `productName` | String | Yes | The public-facing name of the product. |
+| `productCategory`| String (Reference)| Yes | The category the product belongs to (e.g., "RICAMBI"). |
+| `brand` | String (Reference)| Yes | The product's brand. |
+| `model` | String (Reference)| No | The product model it is associated with. |
+| `isSolidDevice`| Boolean | Yes | Distinguishes parts/accessories from whole devices. Defaults to "No". |
+| `purchasePrice`| Number | Yes | The cost to acquire one unit of this product. |
+| `desktopPrice` | Number | Yes | The price for in-store (desktop) sales. |
+| `onlinePrice` | Number | Yes | The price for e-commerce sales. |
+| `color` | String (Reference)| No | The color of the product. |
+| `stock` | Integer | Yes | The current inventory level for this product. |
+| `productImages`| Array of Files | No | Images of the product for the website. |
+| `compatibleModels`| Array of Strings| No | A list of other models this product is compatible with. |
+| `productMeta` | Array of Strings| No | Flags for marketing, like "Latest Product", "Top Selling", "On Offer". |
+| `lastEdited` | DateTime | Yes | Timestamp of the last time the product was updated. |
+
+**Common Business Rules:**
+- When an e-commerce order is completed and payment is received, a corresponding `Transaction` **must** be created.
+- The `stock` level for an `E-Commerce Product` **must** be automatically decremented when an order is fulfilled.
+- The `SKU` should be automatically generated based on a predefined business rule if left blank.
+
+---
+### **Page-Specific Views**
+* [Go to Manage E-Commerce Products Page Details](#manage-ecommerce-products-page)
+* [Go to Add New E-Commerce Product Page Details](#add-ecommerce-product-page)
+
+---
+<br>
+
+#### **Manage E-Commerce Products Page Details** {#manage-ecommerce-products-page}
+* **Purpose:** To view, search, manage, and perform bulk operations on all products listed in the e-commerce system.
+* **Page URL:** `/ecommerce/products`
+* **Search Fields:** A comprehensive set of filters including `SKU`, `Product Name`, `Category`, `Brand`, `Model`, `Condition`, `Stock`, `Price`, and marketing tags.
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | SL# / Checkbox | Row number and a checkbox for bulk operations. |
+    | Image | `productImages` (thumbnail) |
+    | Product Name | `productName` (links to the product's public page) |
+    | Color | `color` |
+    | SKU | `sku` |
+    | Category | `productCategory` |
+    | Brand | `brand` |
+    | Desk (Price) | `desktopPrice` |
+    | Online (Price)| `onlinePrice` |
+    | Purchase (Price)|`purchasePrice` |
+    | Stock | `stock` |
+    | Last Edited | `lastEdited` |
+    | Link | Action links: Stamp (Barcode), View, H.Stock (Home Stock), History, Edit, Delete. |
+* **Bulk Operations:** Users can select multiple products and execute an action (e.g., "Download Selected Product").
+
+<br>
+
+#### **Add New E-Commerce Product Page Details** {#add-ecommerce-product-page}
+* **Purpose:** To create a new product for the e-commerce store.
+* **Page URL:** `/ecommerce/products/new`
+* **Layout:** A multi-column form with various sections.
+* **Fields on this Page:**
+    | Field Label | Field Type | Required |
+    | :--- | :--- | :--- |
+    | Product | Text Input | Yes |
+    | SKU | Text (Auto-generated) | - |
+    | Product Category | Dropdown (with Add button) | Yes |
+    | Is Solid Device? | Dropdown (Yes/No) | Yes |
+    | IMEI Number | Text Input | No |
+    | Purchase Price | Number Input (EUR) | Yes |
+    | Desktop Price | Number Input (EUR) | Yes |
+    | Online Price | Number Input (EUR) | Yes |
+    | Box Number | Dropdown | No |
+    | Color | Dropdown | No |
+    | Stock | Number Input | No |
+    | Product Images | File Upload | No |
+    | Compatible Models | Autocomplete Text Input | No |
+    | Home Stock | Text Input | No |
+    | Product Description | Rich Text Editor | No |
+    | Product Brand | Dropdown (with Add button) | Yes |
+    | Product Model | Dropdown (with Add button) | No |
+    | Product Condition | Dropdown | No |
+    | Product Meta | Checkboxes (Latest, showOffer, Popular, Top Selling) | No |
+    | Product Tags | Autocomplete Text Input | No |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.10 Expense Management</h3></summary>
+
+This module handles the recording and tracking of general business expenses that are not tied to specific inventory purchases or repair parts.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: General Expense**
+* **AI Context:** This model represents any general operational cost for the business, such as rent, salaries, or utilities. It is a direct input into the financial ledger.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the expense record. |
+| `title` | String | Yes | A description of the expense. |
+| `amount` | Number | Yes | The monetary value of the expense. |
+| `branchId` | String (Reference)| Yes | The branch that incurred the expense. |
+| `expenseDate`| Date | Yes | The date the expense occurred. |
+| `dateSaved` | DateTime | Yes | The timestamp when the record was created in the system. |
+
+**Common Business Rules:**
+- When a new `General Expense` is created, it **must** automatically generate a new record in the master `Transaction` table.
+- The corresponding `Transaction` record will have a `type` of "Expense" and its `expense` field will be populated with the `amount` from this record.
+
+---
+### **Page-Specific Views**
+* [Go to List of General Expenses Page Details](#list-of-general-expenses-page)
+
+---
+<br>
+
+#### **List of General Expenses Page Details** {#list-of-general-expenses-page}
+* **Purpose:** To view, search, and manage all recorded general business expenses.
+* **Page URL:** `/expenses`
+* **Search Fields:**
+    | Filter Name | Field Type |
+    | :--- | :--- |
+    | Branch | Dropdown |
+    | Amount | Text Input |
+    | Expense Title | Text Input |
+    | Created Date From / To | Date Picker |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` (links to the edit page for that expense) |
+    | Title | `title` |
+    | Amount | `amount` |
+    | Branch | `branch.name` |
+    | Expense Date | `expenseDate` |
+    | Date Saved | `dateSaved` |
+
+</details>
+
+
+<details>
+<summary><h3>4.10 Expense Management</h3></summary>
+
+This module handles the recording and tracking of general business expenses that are not directly tied to specific inventory purchases or repair parts (e.g., rent, utilities, salaries).
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: General Expense**
+* **AI Context:** This model represents any general operational cost for the business. It is a direct input into the financial ledger.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the expense record. |
+| `title` | String | Yes | A short description of the expense. |
+| `amount` | Number | Yes | The monetary value of the expense. |
+| `branchId` | String (Reference)| Yes | The branch that incurred the expense. |
+| `expenseDate`| Date | Yes | The date the expense occurred (not when it was entered). |
+| `expenseType` | String (Reference)| Yes | The category of the expense (e.g., "Device Buy", "Salary"). |
+| `notes` | Text | No | Any additional notes or details about the expense. |
+| `dateSaved` | DateTime | Yes | The timestamp when the record was created in the system. |
+
+**Common Business Rules:**
+- When a new `General Expense` is saved, it **must** automatically generate a new record in the master `Transaction` table.
+- The corresponding `Transaction` record will have a `type` of "Expense", and its `expense` field will be populated with the `amount` from this record. This ensures financial reports like the "Khata Online" are always accurate.
+
+---
+### **Page-Specific Views**
+* [Go to List of General Expenses Page Details](#list-of-general-expenses-page)
+* [Go to Add General Expense Page Details](#add-general-expense-page)
+
+---
+<br>
+
+#### **List of General Expenses Page Details** {#list-of-general-expenses-page}
+* **Purpose:** To view, search, and manage all recorded general business expenses.
+* **Page URL:** `/expenses`
+* **Search Fields:**
+    | Filter Name | Field Type |
+    | :--- | :--- |
+    | Branch | Dropdown |
+    | Amount | Text Input |
+    | Expense Title | Text Input |
+    | Created Date From / To | Date Picker |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` (links to the edit page for that expense) |
+    | Title | `title` |
+    | Amount | `amount` |
+    | Branch | `branch.name` |
+    | Expense Date | `expenseDate` |
+    | Date Saved | `dateSaved` |
+
+<br>
+
+#### **Add General Expense Page Details** {#add-general-expense-page}
+* **Purpose:** To create a new record for a general business expense.
+* **Page URL:** `/expenses/new`
+* **Fields on this Page:**
+    | Field Label | Field Type | Required |
+    | :--- | :--- | :--- |
+    | Expense Title | Text Input | Yes |
+    | Amount | Number Input | Yes |
+    | Expense Date | Date Picker | Yes |
+    | Additional Note| Text Area | No |
+    | General Expense | Dropdown (Expense Type) | Yes |
+    | Branch | Dropdown (with Add button) | Yes |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.11 User & System Management</h3></summary>
+
+This module covers the administration of users, roles, permissions, and other system-level configurations. Access to this section should be strictly limited to the `Administrator` role.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: User**
+* **AI Context:** This model represents an individual with access to the system, including employees and potentially system-level customers or dealers. Each user is assigned one or more roles that define their permissions.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the user. |
+| `name` | String | Yes | The full name of the user. |
+| `email` | String | Yes | The user's email address, used for login. Must be unique. |
+| `phone` | String | No | The user's primary phone number. |
+| `mobile` | String | No | The user's mobile phone number. |
+| `roles` | Array of Strings| Yes | A list of assigned roles (e.g., "Manager", "Technician"). |
+| `branchId` | String (Reference)| Yes | The primary branch the user is associated with. |
+| `isActive` | Boolean | Yes | A flag to enable or disable the user's account. Defaults to "Yes". |
+
+**Common Business Rules:**
+- A user's permissions are derived entirely from their assigned roles.
+- Deactivating a user (`isActive: No`) should prevent them from logging in but preserve their records (e.g., sales history, repairs) for auditing purposes. Deleting users should be strongly discouraged or disallowed.
+
+---
+### **Page-Specific Views**
+* [Go to User Management List Page Details](#user-management-list-page)
+
+---
+<br>
+
+#### **User Management List Page Details** {#user-management-list-page}
+* **Purpose:** To view, search, and manage all user accounts in the system.
+* **Page URL:** `/admin/users`
+* **Search Fields:**
+    | Filter Name | Field Type |
+    | :--- | :--- |
+    | Search by User Type | Dropdown (e.g., "All", "Manager", "Technician") |
+    | Search by Name | Text Input |
+    | Search by Email | Text Input |
+    | Search by Phone | Text Input |
+    | Search by Mobile | Text Input |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` |
+    | Name | `name` |
+    | Email | `email` |
+    | Position | `roles` (formatted as a string) |
+    | Mobile | `mobile` |
+    | Branch | `branch.name` |
+    | Active? | `isActive` |
+    | Action | Link to the edit page for the user (Modifica). |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.9 E-Commerce Management</h3></summary>
+
+This section details the features for managing products and orders for an external e-commerce website. This is distinct from the in-store POS (`Vendite Magazzino`) and general sales.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: E-Commerce Product**
+* **AI Context:** This model represents a product available on the online store. It has its own pricing, stock counts, and descriptive information.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `productId` | String | Yes | Unique identifier for the product. |
+| `sku` | String | Yes | Stock Keeping Unit. Must be unique. Auto-generated on save. |
+| `productName` | String | Yes | The public-facing name of the product. |
+| `productCategory`| String (Reference)| Yes | The category the product belongs to (e.g., "RICAMBI", "BATTERIE"). |
+| `brand` | String (Reference)| Yes | The product's brand. |
+| `model` | String (Reference)| No | The product model it is associated with. |
+| `isSolidDevice`| Boolean | Yes | Distinguishes parts/accessories from whole devices. Defaults to "No". |
+| `purchasePrice`| Number | Yes | The cost to acquire one unit of this product. |
+| `desktopPrice` | Number | Yes | The price for in-store (desktop) sales. |
+| `onlinePrice` | Number | Yes | The price for e-commerce sales. |
+| `color` | String (Reference)| No | The color of the product. |
+| `stock` | Integer | Yes | The current general inventory level for this product. |
+| `homeStock` | Integer | No | A separate stock count, likely for a central warehouse or "home" location. |
+| `productImages`| Array of Files | No | Images of the product for the website. |
+| `compatibleModels`| Array of Strings| No | A list of other models this product is compatible with. |
+| `productMeta` | Array of Strings| No | Flags for marketing, like "Latest Product", "Top Selling", "On Offer". |
+| `lastEdited` | DateTime | Yes | Timestamp of the last time the product was updated. |
+
+**Common Business Rules:**
+- When an e-commerce order is completed and payment is received, a corresponding `Transaction` **must** be created.
+- The `stock` level for an `E-Commerce Product` **must** be automatically decremented when an order is fulfilled.
+
+---
+### **Page-Specific Views**
+* [Go to Manage E-Commerce Products Page Details](#manage-ecommerce-products-page)
+* [Go to Add New E-Commerce Product Page Details](#add-ecommerce-product-page)
+* [Go to Home Stock List Page Details](#home-stock-list-page)
+
+---
+<br>
+
+#### **Manage E-Commerce Products Page Details** {#manage-ecommerce-products-page}
+* **Purpose:** To view, search, manage, and perform bulk operations on all products listed in the e-commerce system.
+* **Page URL:** `/ecommerce/products`
+* **Search Fields:** A comprehensive set of filters including `SKU`, `Product Name`, `Category`, `Brand`, `Model`, `Condition`, `Stock`, `Price`, and marketing tags.
+* **Table Columns:** `SL#`, `Image`, `Product Name`, `Color`, `SKU`, `Category`, `Brand`, `Desk (Price)`, `Online (Price)`, `Purchase (Price)`, `Stock`, `Last Edited`, `Link` (Actions).
+* **Bulk Operations:** Users can select multiple products via checkboxes and execute actions like "Download Selected Product".
+
+<br>
+
+#### **Add New E-Commerce Product Page Details** {#add-ecommerce-product-page}
+* **Purpose:** To create a new product for the e-commerce store.
+* **Page URL:** `/ecommerce/products/new`
+* **Layout:** A multi-column form with various sections.
+* **Fields on this Page:**
+    | Field Label | Field Type | Required |
+    | :--- | :--- | :--- |
+    | Product | Text Input | Yes |
+    | SKU | Text (Auto-generated) | - |
+    | Product Category | Dropdown (with Add button) | Yes |
+    | Is Solid Device? | Dropdown (Yes/No) | Yes |
+    | IMEI Number | Text Input | No |
+    | Purchase Price | Number Input (EUR) | Yes |
+    | Desktop Price | Number Input (EUR) | Yes |
+    | Online Price | Number Input (EUR) | Yes |
+    | Box Number | Dropdown | No |
+    | Color | Dropdown | No |
+    | Stock | Number Input | No |
+    | Product Images | File Upload | No |
+    | Compatible Models | Autocomplete Text Input | No |
+    | Home Stock | Text Input | No |
+    | Product Description | Rich Text Editor | No |
+    | Product Brand | Dropdown (with Add button) | Yes |
+    | Product Model | Dropdown (with Add button) | No |
+    | Product Condition | Dropdown | No |
+    | Product Meta | Checkboxes (Latest, showOffer, Popular, Top Selling) | No |
+    | Product Tags | Autocomplete Text Input | No |
+
+<br>
+
+#### **Home Stock List Page Details** {#home-stock-list-page}
+* **Purpose:** To provide a simple, filter-less view of product stock levels, showing both general stock and a specific "Home Stock".
+* **Page URL:** `/ecommerce/home-stock`
+* **Filters:** None.
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | Title | `productName` |
+    | Category | `productCategory` |
+    | Product Brand | `brand` |
+    | Model | `model` |
+    | Stock | `stock` |
+    | Home Stock | `homeStock` |
+* **Other Features:** Allows exporting the full list to a CSV file.
+
+</details>
+
+
+
+<details>
+<summary><h3>4.11 User & System Management</h3></summary>
+
+This module covers the administration of users (employees, dealers), customers, and suppliers. Access to this section should be strictly limited to the `Administrator` and `Manager` roles.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: User**
+* **AI Context:** This model represents an individual with access to the system. Each user is assigned one or more roles that define their permissions. This is a crucial entity for tracking employee actions throughout the system.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the user. |
+| `name` | String | Yes | The full name of the user. |
+| `email` | String | Yes | The user's email address. Must be unique. |
+| `loginName` | String | No | A separate username for login, if different from email. |
+| `phone` | String | No | The user's primary phone number. |
+| `mobile` | String | Yes | The user's mobile phone number. |
+| `fax` | String | No | The user's fax number. |
+| `roles` | Array of Strings| Yes | A list of assigned roles (e.g., "Manager", "Technician"). |
+| `location` | String | No | The user's location/city. |
+| `province` | String | No | The user's province. |
+| `address` | String | No | The user's full address. |
+| `postalCode` | String | No | The user's postal code. |
+| `branchId` | String (Reference)| Yes | The primary branch the user is associated with. |
+| `isActive` | Boolean | Yes | A flag to enable or disable the user's account. Defaults to "Yes". |
+
+**Common Business Rules:**
+- A user's permissions are derived entirely from their assigned roles.
+- Deactivating a user (`isActive: No`) should prevent them from logging in but preserve their records for auditing purposes.
+
+---
+### **Page-Specific Views**
+* [Go to User Management List Page Details](#user-management-list-page)
+* [Go to Add User Page Details](#add-user-page)
+
+---
+<br>
+
+#### **User Management List Page Details** {#user-management-list-page}
+* **Purpose:** To view, search, and manage all user accounts in the system.
+* **Page URL:** `/system/users`
+* **Search Fields:**
+    | Filter Name | Field Type |
+    | :--- | :--- |
+    | Search by User Type | Dropdown (e.g., "All", "Manager", "Technician") |
+    | Search by Name | Text Input |
+    | Search by Email | Text Input |
+    | Search by Phone | Text Input |
+    | Search by Mobile | Text Input |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` |
+    | Name | `name` |
+    | Email | `email` |
+    | Position | `roles` (formatted as a string) |
+    | Mobile | `mobile` |
+    | Branch | `branch.name` |
+    | Active? | `isActive` |
+    | Action | Link to the edit page for the user ("Modifica"). |
+
+<br>
+
+#### **Add User Page Details** {#add-user-page}
+* **Purpose:** To create a new user account (employee, dealer, etc.) and assign roles.
+* **Page URL:** `/system/users/new`
+* **Layout:** A two-column form layout.
+* **Fields on this Page:**
+    | Field Label | Field Type | Required |
+    | :--- | :--- | :--- |
+    | Add Name | Text Input | Yes |
+    | Email | Email Input | No |
+    | Login Name | Text Input | No |
+    | Phone | Text Input | No |
+    | Mobile | Text Input | Yes |
+    | Fax | Text Input | No |
+    | Location | Text Input | No |
+    | Province | Dropdown | No |
+    | Address | Text Input | No |
+    | Postal Code | Text Input | No |
+    | Branch | Dropdown | Yes |
+    | Roles | Checkboxes (Manager, FrontDesk Executive, Technician, Branch Dealer) | No |
+    | Active? | Checkbox | No (Defaults to Yes) |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.12 Customer Management</h3></summary>
+
+This module is responsible for managing the records of all customers. A "Customer" is distinct from a "User" (who is an employee or system operator). Customers are the external clients who bring in devices for repair or purchase items.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: Customer**
+* **AI Context:** This model represents an individual or company that interacts with the business. It is linked to `Jobs` (Repairs) and `Sales`. It shares some fields with the `User` model but represents a different entity.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the customer. |
+| `name` | String | Yes | The full name or company name of the customer. |
+| `email` | String | No | The customer's email address. |
+| `phone` | String | No | The customer's primary phone number. |
+| `mobile` | String | Yes | The customer's mobile phone number. |
+| `customerType` / `role`| String | Yes | Defines the type of customer (e.g., "Desktop Customer"). |
+| `branch` | String (Reference)| Yes | The primary branch the customer is associated with. |
+| `isActive` | Boolean | Yes | A flag to indicate if the customer profile is active. Defaults to "Yes". |
+
+**Common Business Rules:**
+- A single customer record can be linked to multiple repairs (`Jobs`) and sales (`Transactions`).
+- Searching for a customer should be fast and available from multiple points in the application (e.g., when creating a new repair or sale).
+
+---
+### **Page-Specific Views**
+* [Go to Customers List Page Details](#customers-list-page)
+
+---
+<br>
+
+#### **Customers List Page Details** {#customers-list-page}
+* **Purpose:** To view, search, and manage all customer records in the system.
+* **Page URL:** `/system/customers`
+* **Search Fields:**
+    | Filter Name | Field Type |
+    | :--- | :--- |
+    | Search by Customer Type| Dropdown (e.g., "All", "Desktop Customer") |
+    | Search by Name | Text Input |
+    | Search by Email | Text Input |
+    | Search by Phone | Text Input |
+    | Search by Mobile | Text Input |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` |
+    | Name | `name` |
+    | Email | `email` |
+    | Role | `customerType` |
+    | Mobile | `mobile` |
+    | Branch | `branch.name` |
+    | Active? | `isActive` |
+    | Action | Link to the edit page for the customer ("Modifica"). |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.12 Customer Management</h3></summary>
+
+This module is responsible for managing the records of all customers. A "Customer" is distinct from a "User" (who is an employee or system operator). Customers are the external clients who bring in devices for repair or purchase items.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: Customer**
+* **AI Context:** This model represents an individual or company that interacts with the business. It is linked to `Jobs` (Repairs) and `Sales`. It shares some fields with the `User` model but represents a different entity with additional business-specific fields like `VAT` and `Fiscal Code`.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the customer. |
+| `name` | String | Yes | The full name or company name of the customer. |
+| `email` | String | No | The customer's email address. |
+| `loginName` | String | No | A separate username for login, if applicable. |
+| `phone` | String | No | The customer's primary phone number. |
+| `mobile` | String | Yes | The customer's mobile phone number. |
+| `fax` | String | No | The customer's fax number. |
+| `fiscalCode` | String | No | The customer's Italian fiscal code. |
+| `vat` | String | No | The customer's VAT number, for businesses. |
+| `customerTypes` | Array of Strings| Yes | Defines the type of customer (e.g., "Dealer", "Desktop Customer", "Online Customer"). A customer can have multiple types. |
+| `location` | String | No | The customer's location/city. |
+| `province` | String | No | The customer's province. |
+| `address` | String | No | The customer's full address. |
+| `postalCode` | String | No | The customer's postal code. |
+| `branch` | String (Reference)| Yes | The primary branch the customer is associated with. |
+| `isActive` | Boolean | Yes | A flag to indicate if the customer profile is active. Defaults to "Yes". |
+
+**Common Business Rules:**
+- A single customer record can be linked to multiple repairs (`Jobs`) and sales (`Transactions`).
+- Searching for a customer should be fast and available from multiple points in the application (e.g., when creating a new repair or sale).
+
+---
+### **Page-Specific Views**
+* [Go to Customers List Page Details](#customers-list-page)
+* [Go to Add Customer Page Details](#add-customer-page)
+
+---
+<br>
+
+#### **Customers List Page Details** {#customers-list-page}
+* **Purpose:** To view, search, and manage all customer records in the system.
+* **Page URL:** `/system/customers`
+* **Search Fields:**
+    | Filter Name | Field Type |
+    | :--- | :--- |
+    | Search by Customer Type| Dropdown (e.g., "All", "Desktop Customer") |
+    | Search by Name | Text Input |
+    | Search by Email | Text Input |
+    | Search by Phone | Text Input |
+    | Search by Mobile | Text Input |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` |
+    | Name | `name` |
+    | Email | `email` |
+    | Role | `customerTypes` (formatted as a string) |
+    | Mobile | `mobile` |
+    | Branch | `branch.name` |
+    | Active? | `isActive` |
+    | Action | Link to the edit page for the customer ("Modifica"). |
+
+<br>
+
+#### **Add Customer Page Details** {#add-customer-page}
+* **Purpose:** To create a new customer record and define their type(s).
+* **Page URL:** `/system/customers/new`
+* **Layout:** A two-column form layout.
+* **Fields on this Page:**
+    | Field Label | Field Type | Required |
+    | :--- | :--- | :--- |
+    | Add Name | Text Input | Yes |
+    | Email | Email Input | No |
+    | Login Name | Text Input | No |
+    | Phone | Text Input | No |
+    | Mobile | Text Input | Yes |
+    | Fax | Text Input | No |
+    | Fiscal Code | Text Input | No |
+    | Location | Text Input | No |
+    | Province | Dropdown | No |
+    | Address | Text Input | No |
+    | Postal Code | Text Input | No |
+    | VAT | Text Input | No |
+    | Branch | Dropdown | Yes |
+    | Box Number | Dropdown (with Add button) | No |
+    | Customer Types | Checkboxes (Dealer?, Desktop Customer?, Online Customer?) | Yes (at least one) |
+    | Active? | Checkbox | No (Defaults to Yes) |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.13 Supplier Management</h3></summary>
+
+This module is for managing the records of all suppliers. A "Supplier" is an external entity (person or company) from whom products, spare parts, or used devices are purchased.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: Supplier**
+* **AI Context:** This model represents a business or individual that provides goods to the company. It is a critical link for tracking `Product Purchases` and the origin of `Tracked Devices`.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the supplier record. |
+| `companyName` | String | Yes | The legal or trading name of the supplier. |
+| `contactName` | String | No | The name of the primary contact person at the company. |
+| `address` | String | No | The physical address of the supplier. |
+| `email` | String | No | The supplier's contact email address. |
+| `phone` | String | No | The supplier's contact phone number. |
+
+**Common Business Rules:**
+- Each supplier can be linked to multiple `Product Purchases` and `Tracked Devices`.
+- The system should prevent the deletion of a supplier who has associated transaction records to maintain data integrity.
+
+---
+### **Page-Specific Views**
+* [Go to Suppliers List Page Details](#suppliers-list-page)
+
+---
+<br>
+
+#### **Suppliers List Page Details** {#suppliers-list-page}
+* **Purpose:** To view, search, and manage all supplier records in the system.
+* **Page URL:** `/system/suppliers`
+* **Features:**
+    * A prominent "Add Supplier" button to navigate to the creation form.
+    * A global search bar to filter the list.
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | (Row Number) | A sequential number for the current view. |
+    | Company | `companyName` |
+    | Contact Name | `contactName` |
+    | Address | `address` |
+    | Email | `email` |
+    | Phone | `phone` |
+    | Actions | Links to `Edit`, `View`, and `Transactions` for the supplier. |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.13 Supplier Management</h3></summary>
+
+This module is for managing the records of all suppliers. A "Supplier" is an external entity (person or company) from whom products, spare parts, or used devices are purchased.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: Supplier**
+* **AI Context:** This model represents a business or individual that provides goods to the company. It is a critical link for tracking `Product Purchases` and the origin of `Tracked Devices`.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the supplier record. |
+| `supplierName` | String | Yes | The legal or trading name of the supplier. |
+| `contactName` | String | No | The name of the primary contact person. |
+| `address` | Text | No | The physical address of the supplier. |
+| `mobile` | String | No | The supplier's mobile number. |
+| `email` | String | No | The supplier's contact email address. |
+| `phone` | String | Yes | The supplier's primary contact phone number ("Telefono"). |
+| `website` | String | No | The supplier's website URL. |
+| `skype` | String | No | The supplier's Skype ID. |
+| `fax` | String | No | The supplier's fax number. |
+| `vatNumber` | String | No | The supplier's VAT number ("P. IVA"). |
+| `notes` | Text | No | General notes about the supplier. |
+
+**Common Business Rules:**
+- Each supplier can be linked to multiple `Product Purchases` and `Tracked Devices`.
+- The system should prevent the deletion of a supplier who has associated transaction records to maintain data integrity.
+
+---
+### **Page-Specific Views**
+* [Go to Suppliers List Page Details](#suppliers-list-page)
+* [Go to Add Supplier Page Details](#add-supplier-page)
+
+---
+<br>
+
+#### **Suppliers List Page Details** {#suppliers-list-page}
+* **Purpose:** To view, search, and manage all supplier records in the system.
+* **Page URL:** `/system/suppliers`
+* **Features:**
+    * A prominent "Add Supplier" button to navigate to the creation form.
+    * A global search bar to filter the list.
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | Company | `supplierName` |
+    | Contact Name | `contactName` |
+    | Address | `address` |
+    | Email | `email` |
+    | Phone | `phone` |
+    | Actions | Links to `Edit`, `View`, and `Transactions` for the supplier. |
+
+<br>
+
+#### **Add Supplier Page Details** {#add-supplier-page}
+* **Purpose:** To create a new record for a supplier. The page shows the add form at the top and the list of existing suppliers at the bottom.
+* **Page URL:** `/system/suppliers/new`
+* **Layout:** A two-column form layout above a data table.
+* **Fields on this Page:**
+    | Field Label | Field Type | Required |
+    | :--- | :--- | :--- |
+    | Add Supplier | Text Input | Yes |
+    | Contact Name | Text Input | No |
+    | Address | Text Area | No |
+    | Mobile | Text Input | No |
+    | Email | Email Input | No |
+    | Website | URL Input | No |
+    | Skype | Text Input | No |
+    | Telefono (Phone) | Text Input | Yes |
+    | Fax | Text Input | No |
+    | P. IVA (VAT Number)| Text Input | No |
+    | Note | Text Area | No |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.14 Product Purchase Management</h3></summary>
+
+This module is for recording and managing the purchase of inventory (products and spare parts) from suppliers. It is a critical component for tracking costs and updating stock levels.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: Product Purchase**
+* **AI Context:** This model represents a single purchase event from a supplier, which may include one or more products. It serves as a foundational record for both inventory and accounting.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the purchase record. |
+| `supplierId` | String (Reference)| Yes | The supplier from whom the products were purchased. |
+| `invoiceNumber`| String | Yes | The invoice number provided by the supplier. |
+| `invoiceDate` | Date | Yes | The date on the supplier's invoice. |
+| `paymentDate` | Date | Yes | The date the payment for the purchase was made. |
+| `purchaseTotal`| Number | Yes | The total amount of the invoice. |
+| `totalPaid` | Number | Yes | The amount paid against the invoice. |
+| `items` | Array of Objects| Yes | A list of products included in this purchase. Each item should have `productId`, `quantity`, and `purchasePrice`. |
+| `savedByUserId`| String (Reference)| Yes | The user who entered the purchase record. |
+| `createdDate` | DateTime | Yes | The timestamp when the record was created in the system. |
+
+**Common Business Rules:**
+- When a `Product Purchase` is saved, it **must** create a corresponding "Expense" record in the master `Transaction` table with `expense: purchaseTotal`.
+- The `stock` level for each product in the `items` array **must** be increased by the purchased quantity upon saving.
+- The system must track the payment status (e.g., Unpaid, Partially Paid, Paid) by comparing `purchaseTotal` and `totalPaid`.
+
+---
+### **Page-Specific Views**
+* [Go to List of Products Purchased Page Details](#list-of-products-purchased-page)
+
+---
+<br>
+
+#### **List of Products Purchased Page Details** {#list-of-products-purchased-page}
+* **Purpose:** To view, search, and manage all inventory purchase records.
+* **Page URL:** `/expenses/product-purchases`
+* **Search Fields:**
+    | Filter Name | Field Type |
+    | :--- | :--- |
+    | Supplier | Dropdown |
+    | Invoice Number | Text Input |
+    | Created Date From | Date Picker |
+    | Created Date To | Date Picker |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` |
+    | Created Date | `createdDate` |
+    | Payment Date | `paymentDate` |
+    | Invoice Date | `invoiceDate` |
+    | Supplier | `supplier.supplierName` |
+    | Invoice Number | `invoiceNumber` |
+    | Purchase Total | `purchaseTotal` |
+    | Total Paid | `totalPaid` (Visually indicates status) |
+    | Saved By | `user.name` |
+    | Actions | Links for `Return`, `View`, `PDF`, and `Edit`. |
+
+</details>
+
+
+
+<details>
+<summary><h3>4.14 Product Purchase Management</h3></summary>
+
+This module is for recording and managing the purchase of inventory (products and spare parts) from suppliers. It is a critical component for tracking costs and updating stock levels.
+
+#### **Master Data Models & Rules**
+
+**Master Data Table: Product Purchase**
+* **AI Context:** This model represents a single purchase event from a supplier, which may include one or more products. It serves as a foundational record for both inventory and accounting.
+
+| Field Name | Data Type | Required | Description / Master Rule |
+| :--- | :--- | :--- | :--- |
+| `id` | String | Yes | Unique identifier for the purchase record. |
+| `supplierId` | String (Reference)| Yes | The supplier from whom the products were purchased. |
+| `invoiceNumber`| String | Yes | The invoice number provided by the supplier. |
+| `invoiceDate` | Date | Yes | The date on the supplier's invoice. |
+| `paymentDate` | Date | Yes | The date the payment for the purchase was made. |
+| `purchaseTotal`| Number | Yes | The total gross amount of the invoice before discounts. |
+| `discount` | Number | No | Any discount applied to the purchase total. |
+| `toPay` | Number | Yes | The final amount due after discount (`purchaseTotal` - `discount`). |
+| `paid` | Number | Yes | The amount paid against the invoice. |
+| `paymentMethodId`| String (Reference)| Yes | The method used for payment. |
+| `paymentReceipt` | String | No | A reference number for the payment transaction. |
+| `orderNote` | Text | No | General notes about the purchase. |
+| `items` | Array of Objects| Yes | A list of products included in this purchase. Each item should have `productId`, `quantity`, and `purchasePrice`. |
+| `savedByUserId`| String (Reference)| Yes | The user who entered the purchase record. |
+| `createdDate` | DateTime | Yes | The timestamp when the record was created in the system. |
+
+**Common Business Rules:**
+- When a `Product Purchase` is saved, it **must** create a corresponding "Expense" record in the master `Transaction` table with `expense: paid`.
+- The `stock` level for each product in the `items` array **must** be increased by the purchased quantity upon saving.
+
+---
+### **Page-Specific Views**
+* [Go to List of Products Purchased Page Details](#list-of-products-purchased-page)
+* [Go to Add New Purchases Page Details](#add-new-purchases-page)
+
+---
+<br>
+
+#### **List of Products Purchased Page Details** {#list-of-products-purchased-page}
+* **Purpose:** To view, search, and manage all inventory purchase records.
+* **Page URL:** `/expenses/product-purchases`
+* **Search Fields:**
+    | Filter Name | Field Type |
+    | :--- | :--- |
+    | Supplier | Dropdown |
+    | Invoice Number | Text Input |
+    | Created Date From / To | Date Picker |
+* **Table Columns:**
+    | Column Header | Data Source Field |
+    | :--- | :--- |
+    | ID | `id` |
+    | Created Date | `createdDate` |
+    | Payment Date | `paymentDate` |
+    | Invoice Date | `invoiceDate` |
+    | Supplier | `supplier.supplierName` |
+    | Invoice Number | `invoiceNumber` |
+    | Purchase Total | `purchaseTotal` |
+    | Total Paid | `paid` (Visually indicates status) |
+    | Saved By | `user.name` |
+    | Actions | Links for `Return`, `View`, `PDF`, and `Edit`. |
+
+<br>
+
+#### **Add New Purchases Page Details** {#add-new-purchases-page}
+* **Purpose:** To create a detailed record of a new product purchase, including line items and payment information.
+* **Page URL:** `/expenses/product-purchases/new`
+* **Layout:** A complex multi-column layout with a section for adding line items and another for invoice/payment details.
+* **Fields on this Page:**
+    | Field Label | Field Type | Required | Section |
+    | :--- | :--- | :--- | :--- |
+    | Product | Autocomplete Text Input | Yes | Line Item |
+    | Quantity | Number Input | Yes | Line Item |
+    | Purchase Price | Number Input | Yes | Line Item |
+    | Desktop Price | Number Input | No | Line Item |
+    | Online Price | Number Input | No | Line Item |
+    | **(Add Product Button)** | Button | - | Line Item |
+    | Supplier | Dropdown (with Add button) | Yes | Details |
+    | Invoice Number | Text Input | Yes | Details |
+    | Invoice Date | Date Picker | Yes | Details |
+    | Payment Date | Date Picker | Yes | Details |
+    | Purchase Total | Number Input | Yes | Payment |
+    | Discount | Number Input | No | Payment |
+    | To Pay | Number Input (Read-only) | Yes | Payment |
+    | Paid | Number Input | Yes | Payment |
+    | Payment Method | Dropdown (with Add button) | Yes | Payment |
+    | Payment Receipt Number| Text Input | No | Payment |
+    | Order Note | Text Area | No | Payment |
+
+</details>
